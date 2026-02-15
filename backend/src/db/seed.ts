@@ -134,6 +134,45 @@ const DEFAULT_COPING_TOOLS = [
     ],
     whenToUse: "When triggered by your environment",
   },
+  {
+    id: 'tool-short-walk',
+    title: "Short Walk",
+    duration: "5 minutes",
+    steps: [
+      "Stand up and put on comfortable shoes",
+      "Step outside or find a safe indoor space",
+      "Walk at a moderate pace for 5 minutes",
+      "Focus on your surroundings",
+      "Return and reassess your craving",
+    ],
+    whenToUse: "When needing physical activity and a change of scenery",
+  },
+  {
+    id: 'tool-cold-water',
+    title: "Cold Water Immersion",
+    duration: "2 minutes",
+    steps: [
+      "Fill a bowl with cold water",
+      "Submerge your face or hands for 30 seconds",
+      "Take deep breaths",
+      "Repeat 2-3 times if needed",
+      "Notice the change in your mental state",
+    ],
+    whenToUse: "When needing an immediate physical reset",
+  },
+  {
+    id: 'tool-reach-out',
+    title: "Reach Out to Someone",
+    duration: "10 minutes",
+    steps: [
+      "Identify a trusted person you can contact",
+      "Call, text, or visit them",
+      "Share how you're feeling",
+      "Listen to their support and advice",
+      "Feel the connection and strength",
+    ],
+    whenToUse: "When feeling isolated or overwhelmed",
+  },
 ];
 
 async function seedCopingTools() {
@@ -172,6 +211,28 @@ async function seedCopingTools() {
       });
 
       app.logger.info({ title: tool.title, isMandatory }, 'Coping tool created');
+    }
+
+    // Ensure all tools not in MANDATORY_TOOL_IDS are set to is_mandatory=false
+    // This handles any tools that might exist in the database but aren't in our seed list
+    const toolTitles = DEFAULT_COPING_TOOLS.map((t) => t.title);
+    const allTools = await app.db
+      .select({ id: appSchema.copingTools.id, title: appSchema.copingTools.title })
+      .from(appSchema.copingTools);
+
+    for (const existingTool of allTools) {
+      // If tool is not in our seed list, it should not be mandatory
+      if (!toolTitles.includes(existingTool.title)) {
+        await app.db
+          .update(appSchema.copingTools)
+          .set({ isMandatory: false })
+          .where(eq(appSchema.copingTools.id, existingTool.id));
+
+        app.logger.info(
+          { title: existingTool.title },
+          'Existing tool updated to non-mandatory'
+        );
+      }
     }
 
     app.logger.info('Coping tools seed completed successfully');
