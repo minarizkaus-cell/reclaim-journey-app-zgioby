@@ -8,7 +8,7 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter, usePathname, Slot } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 import { BlurView } from 'expo-blur';
@@ -49,6 +49,9 @@ export default function FloatingTabBar({
   const theme = useTheme();
   const animatedValue = useSharedValue(0);
 
+  console.log('[FloatingTabBar] Current pathname:', pathname);
+  console.log('[FloatingTabBar] Available tabs:', tabs.map(t => t.route));
+
   // Improved active tab detection with better path matching
   const activeTabIndex = React.useMemo(() => {
     // Find the best matching tab based on the current pathname
@@ -81,6 +84,8 @@ export default function FloatingTabBar({
       }
     });
 
+    console.log('[FloatingTabBar] Active tab index:', bestMatch, 'with score:', bestMatchScore);
+
     // Default to first tab if no match found
     return bestMatch >= 0 ? bestMatch : 0;
   }, [pathname, tabs]);
@@ -96,6 +101,7 @@ export default function FloatingTabBar({
   }, [activeTabIndex, animatedValue]);
 
   const handleTabPress = (route: Href) => {
+    console.log('[FloatingTabBar] Tab pressed, navigating to:', route);
     router.push(route);
   };
 
@@ -154,56 +160,62 @@ export default function FloatingTabBar({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <View style={[
-        styles.container,
-        {
-          width: containerWidth,
-          marginBottom: bottomMargin ?? 100
-        }
-      ]}>
-        <BlurView
-          intensity={80}
-          style={[dynamicStyles.blurContainer, { borderRadius }]}
-        >
-          <View style={dynamicStyles.background} />
-          <Animated.View style={[dynamicStyles.indicator, indicatorStyle]} />
-          <View style={styles.tabsContainer}>
-            {tabs.map((tab, index) => {
-              const isActive = activeTabIndex === index;
+    <View style={{ flex: 1 }}>
+      {/* Content area - this is where the actual screens render */}
+      <Slot />
+      
+      {/* Floating tab bar */}
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+        <View style={[
+          styles.container,
+          {
+            width: containerWidth,
+            marginBottom: bottomMargin ?? 100
+          }
+        ]}>
+          <BlurView
+            intensity={80}
+            style={[dynamicStyles.blurContainer, { borderRadius }]}
+          >
+            <View style={dynamicStyles.background} />
+            <Animated.View style={[dynamicStyles.indicator, indicatorStyle]} />
+            <View style={styles.tabsContainer}>
+              {tabs.map((tab, index) => {
+                const isActive = activeTabIndex === index;
 
-              return (
-                <React.Fragment key={index}>
-                <TouchableOpacity
-                  style={styles.tab}
-                  onPress={() => handleTabPress(tab.route)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.tabContent}>
-                    <IconSymbol
-                      android_material_icon_name={tab.icon}
-                      ios_icon_name={tab.icon}
-                      size={24}
-                      color={isActive ? theme.colors.primary : (theme.dark ? '#98989D' : '#000000')}
-                    />
-                    <Text
-                      style={[
-                        styles.tabLabel,
-                        { color: theme.dark ? '#98989D' : '#8E8E93' },
-                        isActive && { color: theme.colors.primary, fontWeight: '600' },
-                      ]}
-                    >
-                      {tab.label}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                </React.Fragment>
-              );
-            })}
-          </View>
-        </BlurView>
-      </View>
-    </SafeAreaView>
+                return (
+                  <React.Fragment key={index}>
+                  <TouchableOpacity
+                    style={styles.tab}
+                    onPress={() => handleTabPress(tab.route)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.tabContent}>
+                      <IconSymbol
+                        android_material_icon_name={tab.icon}
+                        ios_icon_name={tab.icon}
+                        size={24}
+                        color={isActive ? theme.colors.primary : (theme.dark ? '#98989D' : '#000000')}
+                      />
+                      <Text
+                        style={[
+                          styles.tabLabel,
+                          { color: theme.dark ? '#98989D' : '#8E8E93' },
+                          isActive && { color: theme.colors.primary, fontWeight: '600' },
+                        ]}
+                      >
+                        {tab.label}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  </React.Fragment>
+                );
+              })}
+            </View>
+          </BlurView>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 

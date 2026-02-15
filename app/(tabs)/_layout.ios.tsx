@@ -3,6 +3,8 @@ import React from 'react';
 import { useColorScheme } from 'react-native';
 import FloatingTabBar from '@/components/FloatingTabBar';
 import { colors } from '@/styles/commonStyles';
+import { Href } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -11,27 +13,27 @@ export default function TabLayout() {
   const tabs = [
     {
       name: 'Home',
-      route: '/(tabs)/(home)/',
-      ios_icon_name: 'house.fill',
-      android_material_icon_name: 'home' as const,
+      label: 'Home',
+      route: '/(tabs)/(home)/' as Href,
+      icon: 'home' as keyof typeof MaterialIcons.glyphMap,
     },
     {
       name: 'Coping Tools',
-      route: '/(tabs)/coping-tools',
-      ios_icon_name: 'heart.fill',
-      android_material_icon_name: 'favorite' as const,
+      label: 'Tools',
+      route: '/(tabs)/coping-tools' as Href,
+      icon: 'favorite' as keyof typeof MaterialIcons.glyphMap,
     },
     {
       name: 'Progress',
-      route: '/(tabs)/progress',
-      ios_icon_name: 'chart.bar.fill',
-      android_material_icon_name: 'trending-up' as const,
+      label: 'Progress',
+      route: '/(tabs)/progress' as Href,
+      icon: 'trending-up' as keyof typeof MaterialIcons.glyphMap,
     },
     {
       name: 'Settings',
-      route: '/(tabs)/settings',
-      ios_icon_name: 'gearshape.fill',
-      android_material_icon_name: 'settings' as const,
+      label: 'Settings',
+      route: '/(tabs)/settings' as Href,
+      icon: 'settings' as keyof typeof MaterialIcons.glyphMap,
     },
   ];
 
