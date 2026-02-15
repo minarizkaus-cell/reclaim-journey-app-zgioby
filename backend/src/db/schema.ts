@@ -39,3 +39,16 @@ export const copingToolCompletions = pgTable('coping_tool_completions', {
   completedAt: timestamp('completed_at', { withTimezone: true }).notNull().defaultNow(),
   sessionId: uuid('session_id').references(() => cravingSessions.id),
 });
+
+export const calendarEvents = pgTable('calendar_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  date: text('date').notNull(), // YYYY-MM-DD format
+  time: text('time').notNull(), // HH:MM format
+  duration: integer('duration').notNull(), // minutes
+  reminder: integer('reminder').notNull(), // minutes before event
+  reminderEnabled: boolean('reminder_enabled').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

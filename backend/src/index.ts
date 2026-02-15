@@ -5,6 +5,7 @@ import { registerJournalRoutes } from './routes/journal.js';
 import { registerUserRoutes } from './routes/user.js';
 import { registerCravingSessionsRoutes } from './routes/craving-sessions.js';
 import { registerCopingToolsRoutes } from './routes/coping-tools.js';
+import { registerCalendarEventsRoutes } from './routes/calendar-events.js';
 
 const schema = { ...appSchema, ...authSchema };
 
@@ -23,6 +24,7 @@ registerUserRoutes(app);
 registerJournalRoutes(app);
 registerCravingSessionsRoutes(app);
 registerCopingToolsRoutes(app);
+registerCalendarEventsRoutes(app);
 
 await app.run();
 app.logger.info('Application running');
