@@ -17,6 +17,15 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { authenticatedGet, authenticatedPost } from '@/utils/api';
 import { CopingTool, CopingToolCompletion } from '@/types/models';
 
+// Hardcoded list of mandatory tool IDs
+const MANDATORY_TOOL_IDS = [
+  'tool-deep-breathing',
+  'tool-box-breathing',
+  'tool-grounding',
+  'tool-delay-10',
+  'tool-change-location',
+];
+
 export default function CopingToolsScreen() {
   const colorScheme = useColorScheme();
   const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
@@ -65,22 +74,30 @@ export default function CopingToolsScreen() {
     }
   };
 
+  // Check if a tool is mandatory based on hardcoded IDs
+  const isToolMandatory = (toolId: string) => {
+    return MANDATORY_TOOL_IDS.includes(toolId);
+  };
+
   const isToolCompleted = (toolId: string) => {
     return completions.some(c => c.tool_id === toolId);
   };
 
+  // Get mandatory tools based on hardcoded IDs
   const getMandatoryTools = () => {
-    return copingTools.filter(t => t.is_mandatory);
+    return copingTools.filter(t => isToolMandatory(t.id));
   };
 
+  // Count completed mandatory tools
   const getCompletedMandatoryCount = () => {
     const mandatoryTools = getMandatoryTools();
     return mandatoryTools.filter(t => isToolCompleted(t.id)).length;
   };
 
+  // Check if all mandatory tools are completed
   const areAllMandatoryToolsCompleted = () => {
     const mandatoryTools = getMandatoryTools();
-    return mandatoryTools.every(t => isToolCompleted(t.id));
+    return mandatoryTools.length > 0 && mandatoryTools.every(t => isToolCompleted(t.id));
   };
 
   const handleCompleteTool = async (toolId: string) => {
@@ -161,6 +178,9 @@ export default function CopingToolsScreen() {
     );
   }
 
+  const mandatoryToolsCount = getMandatoryTools().length;
+  const completedMandatoryCount = getCompletedMandatoryCount();
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
       <View style={styles.header}>
@@ -178,7 +198,7 @@ export default function CopingToolsScreen() {
               color={themeColors.primary}
             />
             <Text style={[styles.progressText, { color: themeColors.text }]}>
-              Complete {getCompletedMandatoryCount()}/{getMandatoryTools().length} mandatory tools
+              Complete {completedMandatoryCount}/{mandatoryToolsCount} mandatory tools
             </Text>
           </View>
         )}
@@ -188,6 +208,7 @@ export default function CopingToolsScreen() {
         {copingTools.map((tool) => {
           const isExpanded = expandedId === tool.id;
           const isCompleted = isToolCompleted(tool.id);
+          const isMandatory = isToolMandatory(tool.id);
           const isCompletingThis = completing === tool.id;
 
           return (
@@ -220,7 +241,7 @@ export default function CopingToolsScreen() {
                       <Text style={[styles.toolTitle, { color: themeColors.text }]}>
                         {tool.title}
                       </Text>
-                      {tool.is_mandatory && (
+                      {isMandatory && (
                         <View style={[styles.mandatoryBadge, { backgroundColor: themeColors.primary }]}>
                           <Text style={styles.mandatoryText}>Required</Text>
                         </View>
