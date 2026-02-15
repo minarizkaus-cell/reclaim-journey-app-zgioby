@@ -58,6 +58,14 @@ export interface CopingTool {
   is_mandatory: boolean;
 }
 
+// CopingToolCompletion data model
+export interface CopingToolCompletion {
+  id: string;
+  tool_id: string;
+  completed_at: string; // ISO 8601 date string
+  session_id?: string; // Optional session ID
+}
+
 // CalendarEvent data model
 export interface CalendarEvent {
   id: string;

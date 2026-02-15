@@ -7,142 +7,312 @@ import {
   ScrollView,
   TouchableOpacity,
   useColorScheme,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { authenticatedPost } from '@/utils/api';
 
-const urgencyLevels = [
-  { id: 1, label: 'Mild', description: 'I can manage this', color: '#81C784' },
-  { id: 2, label: 'Moderate', description: 'It\'s getting stronger', color: '#FFD54F' },
-  { id: 3, label: 'Strong', description: 'I need help now', color: '#FFB74D' },
-  { id: 4, label: 'Intense', description: 'This is very difficult', color: '#E57373' },
+// Same trigger list as Journal Add
+const COMMON_TRIGGERS = [
+  'Stress',
+  'Anxiety',
+  'Social pressure',
+  'Boredom',
+  'Loneliness',
+  'Anger',
+  'Depression',
+  'Celebration',
+  'Fatigue',
+  'Other',
 ];
 
-const copingStrategies = [
-  { id: '1', title: 'Call Support Person', icon: 'phone', action: 'call' },
-  { id: '2', title: 'Deep Breathing', icon: 'air', action: 'breathing' },
-  { id: '3', title: 'Go for a Walk', icon: 'directions-walk', action: 'walk' },
-  { id: '4', title: 'Distraction Activity', icon: 'sports-esports', action: 'distract' },
+// Need type options
+const NEED_TYPES = [
+  { id: 'distract', label: 'Distract', description: 'Take my mind off it', icon: 'sports-esports', color: '#81C784' },
+  { id: 'calm', label: 'Calm', description: 'Reduce anxiety and stress', icon: 'air', color: '#64B5F6' },
+  { id: 'support', label: 'Support', description: 'Connect with someone', icon: 'people', color: '#FFB74D' },
+  { id: 'escape', label: 'Escape', description: 'Get away from triggers', icon: 'directions-walk', color: '#BA68C8' },
+  { id: 'reflect', label: 'Reflect', description: 'Understand what I\'m feeling', icon: 'psychology', color: '#4DB6AC' },
 ];
+
+type Step = 'triggers' | 'intensity' | 'need_type';
 
 export default function CravingFlowScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
-  const [selectedUrgency, setSelectedUrgency] = useState<number | null>(null);
-  const [step, setStep] = useState<'urgency' | 'strategies'>('urgency');
+  
+  const [step, setStep] = useState<Step>('triggers');
+  const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
+  const [intensity, setIntensity] = useState<number | null>(null);
+  const [needType, setNeedType] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const handleUrgencySelect = (level: number) => {
-    console.log('Craving urgency selected:', level);
-    setSelectedUrgency(level);
-    setStep('strategies');
+  const toggleTrigger = (trigger: string) => {
+    console.log('[CravingFlow] User toggled trigger:', trigger);
+    setSelectedTriggers((prev) =>
+      prev.includes(trigger) ? prev.filter((t) => t !== trigger) : [...prev, trigger]
+    );
   };
 
-  const handleStrategySelect = (strategyId: string) => {
-    console.log('Coping strategy selected:', strategyId);
-    router.push('/(tabs)/coping-tools');
+  const handleNextFromTriggers = () => {
+    if (selectedTriggers.length === 0) {
+      console.log('[CravingFlow] No triggers selected');
+      return;
+    }
+    console.log('[CravingFlow] Moving to intensity step');
+    setStep('intensity');
   };
 
-  const titleText = step === 'urgency' ? 'How urgent is this craving?' : 'Choose a coping strategy';
-  const subtitleText = step === 'urgency' 
-    ? 'Be honest with yourself - there\'s no wrong answer'
-    : 'Pick what feels right for you right now';
+  const handleNextFromIntensity = () => {
+    if (intensity === null) {
+      console.log('[CravingFlow] No intensity selected');
+      return;
+    }
+    console.log('[CravingFlow] Moving to need_type step');
+    setStep('need_type');
+  };
+
+  const handleComplete = async () => {
+    if (!needType || intensity === null || selectedTriggers.length === 0) {
+      console.log('[CravingFlow] Missing required fields');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      console.log('[CravingFlow] Creating craving session...', {
+        triggers: selectedTriggers,
+        intensity,
+        need_type: needType,
+      });
+
+      const response = await authenticatedPost('/api/craving-sessions', {
+        triggers: selectedTriggers,
+        intensity: intensity,
+        need_type: needType,
+      });
+
+      console.log('[CravingFlow] Craving session created:', response);
+
+      // Navigate to Coping Tools with session ID
+      router.push({
+        pathname: '/(tabs)/coping-tools',
+        params: { fromCravingFlow: 'true', sessionId: response.id },
+      });
+    } catch (error) {
+      console.error('[CravingFlow] Failed to create craving session:', error);
+      alert('Failed to save craving session. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getTitleText = () => {
+    switch (step) {
+      case 'triggers':
+        return 'What triggered this craving?';
+      case 'intensity':
+        return 'How intense is this craving?';
+      case 'need_type':
+        return 'What do you need right now?';
+    }
+  };
+
+  const getSubtitleText = () => {
+    switch (step) {
+      case 'triggers':
+        return 'Select all that apply';
+      case 'intensity':
+        return 'Rate from 1 (mild) to 10 (intense)';
+      case 'need_type':
+        return 'Choose what would help you most';
+    }
+  };
+
+  const canProceed = () => {
+    switch (step) {
+      case 'triggers':
+        return selectedTriggers.length > 0;
+      case 'intensity':
+        return intensity !== null;
+      case 'need_type':
+        return needType !== null;
+    }
+  };
 
   return (
     <>
       <Stack.Screen
         options={{
           headerShown: true,
-          title: 'Craving Support',
+          title: 'Craving Flow',
           headerBackTitle: 'Back',
         }}
       />
       <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Progress Indicator */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressDot, step === 'triggers' && styles.progressDotActive, { backgroundColor: step === 'triggers' ? themeColors.primary : themeColors.border }]} />
+            <View style={[styles.progressLine, { backgroundColor: themeColors.border }]} />
+            <View style={[styles.progressDot, step === 'intensity' && styles.progressDotActive, { backgroundColor: step === 'intensity' ? themeColors.primary : themeColors.border }]} />
+            <View style={[styles.progressLine, { backgroundColor: themeColors.border }]} />
+            <View style={[styles.progressDot, step === 'need_type' && styles.progressDotActive, { backgroundColor: step === 'need_type' ? themeColors.primary : themeColors.border }]} />
+          </View>
+
           <View style={styles.header}>
-            <Text style={[styles.title, { color: themeColors.text }]}>{titleText}</Text>
+            <Text style={[styles.title, { color: themeColors.text }]}>{getTitleText()}</Text>
             <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-              {subtitleText}
+              {getSubtitleText()}
             </Text>
           </View>
 
-          {step === 'urgency' ? (
-            <View style={styles.urgencyContainer}>
-              {urgencyLevels.map((level) => (
-                <TouchableOpacity
-                  key={level.id}
-                  style={[
-                    styles.urgencyCard,
-                    {
-                      backgroundColor: themeColors.card,
-                      borderColor: selectedUrgency === level.id ? level.color : themeColors.border,
-                      borderWidth: selectedUrgency === level.id ? 2 : 1,
-                    },
-                  ]}
-                  onPress={() => handleUrgencySelect(level.id)}
-                >
-                  <View style={[styles.urgencyIndicator, { backgroundColor: level.color }]} />
-                  <View style={styles.urgencyInfo}>
-                    <Text style={[styles.urgencyLabel, { color: themeColors.text }]}>{level.label}</Text>
-                    <Text style={[styles.urgencyDescription, { color: themeColors.textSecondary }]}>
-                      {level.description}
+          {/* Step 1: Triggers */}
+          {step === 'triggers' && (
+            <View style={styles.optionRow}>
+              {COMMON_TRIGGERS.map((trigger) => {
+                const isSelected = selectedTriggers.includes(trigger);
+                return (
+                  <TouchableOpacity
+                    key={trigger}
+                    style={[
+                      styles.optionButton,
+                      { backgroundColor: themeColors.card, borderColor: themeColors.border },
+                      isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
+                    ]}
+                    onPress={() => toggleTrigger(trigger)}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        { color: themeColors.text },
+                        isSelected && { color: '#FFFFFF' },
+                      ]}
+                    >
+                      {trigger}
                     </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          ) : (
-            <View style={styles.strategiesContainer}>
-              {copingStrategies.map((strategy) => (
-                <TouchableOpacity
-                  key={strategy.id}
-                  style={[styles.strategyCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}
-                  onPress={() => handleStrategySelect(strategy.id)}
-                >
-                  <View style={[styles.strategyIcon, { backgroundColor: `${themeColors.primary}20` }]}>
-                    <IconSymbol
-                      ios_icon_name="heart.fill"
-                      android_material_icon_name={strategy.icon}
-                      size={32}
-                      color={themeColors.primary}
-                    />
-                  </View>
-                  <Text style={[styles.strategyTitle, { color: themeColors.text }]}>{strategy.title}</Text>
-                  <IconSymbol
-                    ios_icon_name="chevron.right"
-                    android_material_icon_name="chevron-right"
-                    size={20}
-                    color={themeColors.textSecondary}
-                  />
-                </TouchableOpacity>
-              ))}
+          )}
 
-              <View style={[styles.emergencyCard, { backgroundColor: themeColors.card, borderColor: themeColors.primary, borderWidth: 2 }]}>
-                <IconSymbol
-                  ios_icon_name="exclamationmark.triangle.fill"
-                  android_material_icon_name="warning"
-                  size={32}
-                  color={themeColors.primary}
-                />
-                <Text style={[styles.emergencyTitle, { color: themeColors.text }]}>
-                  In Crisis?
-                </Text>
-                <Text style={[styles.emergencyText, { color: themeColors.textSecondary }]}>
-                  If you're in immediate danger, please call emergency services or a crisis helpline.
-                </Text>
-                <TouchableOpacity
-                  style={[styles.emergencyButton, { backgroundColor: themeColors.primary }]}
-                  onPress={() => router.push('/resources')}
-                >
-                  <Text style={styles.emergencyButtonText}>Emergency Resources</Text>
-                </TouchableOpacity>
-              </View>
+          {/* Step 2: Intensity */}
+          {step === 'intensity' && (
+            <View style={styles.intensityContainer}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => {
+                const isSelected = intensity === level;
+                return (
+                  <TouchableOpacity
+                    key={level}
+                    style={[
+                      styles.intensityButton,
+                      { backgroundColor: themeColors.card, borderColor: themeColors.border },
+                      isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
+                    ]}
+                    onPress={() => {
+                      console.log('[CravingFlow] User selected intensity:', level);
+                      setIntensity(level);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.intensityText,
+                        { color: themeColors.text },
+                        isSelected && { color: '#FFFFFF' },
+                      ]}
+                    >
+                      {level}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Step 3: Need Type */}
+          {step === 'need_type' && (
+            <View style={styles.needTypeContainer}>
+              {NEED_TYPES.map((need) => {
+                const isSelected = needType === need.id;
+                return (
+                  <TouchableOpacity
+                    key={need.id}
+                    style={[
+                      styles.needTypeCard,
+                      {
+                        backgroundColor: themeColors.card,
+                        borderColor: isSelected ? need.color : themeColors.border,
+                        borderWidth: isSelected ? 2 : 1,
+                      },
+                    ]}
+                    onPress={() => {
+                      console.log('[CravingFlow] User selected need type:', need.id);
+                      setNeedType(need.id);
+                    }}
+                  >
+                    <View style={[styles.needTypeIcon, { backgroundColor: `${need.color}20` }]}>
+                      <IconSymbol
+                        ios_icon_name="heart.fill"
+                        android_material_icon_name={need.icon}
+                        size={32}
+                        color={need.color}
+                      />
+                    </View>
+                    <View style={styles.needTypeInfo}>
+                      <Text style={[styles.needTypeLabel, { color: themeColors.text }]}>{need.label}</Text>
+                      <Text style={[styles.needTypeDescription, { color: themeColors.textSecondary }]}>
+                        {need.description}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </ScrollView>
+
+        {/* Action Button */}
+        <View style={[styles.actionContainer, { backgroundColor: themeColors.background }]}>
+          {step !== 'triggers' && (
+            <TouchableOpacity
+              style={[styles.backButton, { borderColor: themeColors.border }]}
+              onPress={() => {
+                if (step === 'intensity') setStep('triggers');
+                else if (step === 'need_type') setStep('intensity');
+              }}
+            >
+              <Text style={[styles.backButtonText, { color: themeColors.text }]}>Back</Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              { backgroundColor: themeColors.primary },
+              !canProceed() && styles.nextButtonDisabled,
+            ]}
+            onPress={() => {
+              if (step === 'triggers') handleNextFromTriggers();
+              else if (step === 'intensity') handleNextFromIntensity();
+              else if (step === 'need_type') handleComplete();
+            }}
+            disabled={!canProceed() || saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.nextButtonText}>
+                {step === 'need_type' ? 'Go to Coping Tools' : 'Next'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </>
   );
@@ -156,8 +326,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  header: {
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 20,
+    marginBottom: 16,
+  },
+  progressDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  progressDotActive: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  progressLine: {
+    width: 40,
+    height: 2,
+  },
+  header: {
     marginBottom: 24,
   },
   title: {
@@ -168,42 +358,49 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
   },
-  urgencyContainer: {
-    gap: 12,
-  },
-  urgencyCard: {
+  optionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    borderRadius: 16,
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  urgencyIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 16,
+  optionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
   },
-  urgencyInfo: {
-    flex: 1,
-  },
-  urgencyLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  urgencyDescription: {
+  optionText: {
     fontSize: 14,
   },
-  strategiesContainer: {
+  intensityContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  intensityButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  intensityText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  needTypeContainer: {
     gap: 12,
   },
-  strategyCard: {
+  needTypeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
     borderRadius: 16,
   },
-  strategyIcon: {
+  needTypeIcon: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -211,34 +408,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 16,
   },
-  strategyTitle: {
+  needTypeInfo: {
     flex: 1,
+  },
+  needTypeLabel: {
     fontSize: 18,
     fontWeight: '600',
+    marginBottom: 4,
   },
-  emergencyCard: {
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  emergencyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emergencyText: {
+  needTypeDescription: {
     fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
   },
-  emergencyButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  actionContainer: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  emergencyButtonText: {
+  backButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  nextButton: {
+    flex: 2,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  nextButtonDisabled: {
+    opacity: 0.5,
+  },
+  nextButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
