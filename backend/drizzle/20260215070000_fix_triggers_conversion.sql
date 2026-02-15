@@ -1,0 +1,2 @@
+-- This migration was superseded by the update to 20260215062119_loose_butterfly.sql
+-- No operations needed here
