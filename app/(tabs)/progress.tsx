@@ -227,6 +227,36 @@ function calculateCravingsThisWeek(journalEntries: JournalEntry[]): number {
   return cravingsCount;
 }
 
+function calculateDaysSinceLastUsed(journalEntries: JournalEntry[]): number | null {
+  // Find all entries where outcome = 'used'
+  const usedEntries = journalEntries.filter(entry => entry.outcome === 'used');
+  
+  if (usedEntries.length === 0) {
+    console.log('[Progress] No entries with outcome="used" found');
+    return null;
+  }
+
+  // Sort by created_at descending to get the most recent
+  const sortedUsedEntries = usedEntries.sort((a, b) => {
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  const mostRecentUsedEntry = sortedUsedEntries[0];
+  const usedDate = new Date(mostRecentUsedEntry.created_at);
+  const today = new Date();
+  
+  // Reset time to midnight for accurate day calculation
+  usedDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  
+  const diffTime = today.getTime() - usedDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  console.log('[Progress] Days since last used:', diffDays, 'from entry:', mostRecentUsedEntry.id);
+  
+  return diffDays;
+}
+
 export default function ProgressScreen() {
   const [stats, setStats] = useState<JournalStats | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
@@ -283,6 +313,7 @@ export default function ProgressScreen() {
   
   const cravingsThisWeek = calculateCravingsThisWeek(journalEntries);
   const avgIntensityThisWeek = calculateAvgIntensityThisWeek(journalEntries);
+  const daysSinceLastUsed = calculateDaysSinceLastUsed(journalEntries);
 
   if (!stats || stats.totalEntries === 0) {
     return (
@@ -424,6 +455,25 @@ export default function ProgressScreen() {
             )}
           </View>
         </View>
+
+        {/* Days Since Last Used Card - Only show if there's a 'used' entry */}
+        {daysSinceLastUsed !== null && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Recovery Milestone</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <IconSymbol
+                  ios_icon_name="checkmark.circle"
+                  android_material_icon_name="check-circle"
+                  size={32}
+                  color="#4CAF50"
+                />
+                <Text style={styles.statValue}>{daysSinceLastUsed}</Text>
+                <Text style={styles.statLabel}>Days Since Last Used</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Outcomes</Text>
