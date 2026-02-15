@@ -78,13 +78,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('[AuthContext] Initializing, fetching user...');
     fetchUser();
 
-    // Mark initial load as complete after 2 seconds
+    // CRITICAL: Disable deep link listener on web to prevent infinite loops
+    // On web, URL changes (navigation) trigger the listener, causing constant re-fetches
+    if (Platform.OS === 'web') {
+      console.log('[AuthContext] Web platform detected, deep link listener disabled');
+      return;
+    }
+
+    // Mark initial load as complete after 2 seconds (native only)
     const initialLoadTimer = setTimeout(() => {
       isInitialLoadRef.current = false;
       console.log('[AuthContext] Initial load complete, deep link listener now active');
     }, 2000);
 
-    // Listen for deep links (e.g. from social auth redirects)
+    // Listen for deep links (e.g. from social auth redirects) - NATIVE ONLY
     const subscription = Linking.addEventListener("url", (event) => {
       // Ignore deep links during initial load to prevent infinite loops
       if (isInitialLoadRef.current) {
