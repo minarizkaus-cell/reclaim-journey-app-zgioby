@@ -13,7 +13,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedGet } from '@/utils/api';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { JournalStats, User, JournalEntry } from '@/types/models';
 
 const styles = StyleSheet.create({
@@ -119,6 +119,11 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginLeft: 8,
     flex: 1,
+  },
+  triggerCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   insightCard: {
     backgroundColor: colors.primary,
@@ -257,6 +262,48 @@ function calculateDaysSinceLastUsed(journalEntries: JournalEntry[]): number | nu
   return diffDays;
 }
 
+function calculateMostUsedTools(journalEntries: JournalEntry[]): Array<{ tool: string; count: number }> {
+  const toolCounts: { [key: string]: number } = {};
+
+  journalEntries.forEach(entry => {
+    if (entry.tools_used && Array.isArray(entry.tools_used)) {
+      entry.tools_used.forEach(tool => {
+        toolCounts[tool] = (toolCounts[tool] || 0) + 1;
+      });
+    }
+  });
+
+  const sortedTools = Object.entries(toolCounts)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .slice(0, 3)
+    .map(([tool, count]) => ({ tool, count }));
+
+  console.log('[Progress] Most used tools:', sortedTools);
+  
+  return sortedTools;
+}
+
+function calculateMostCommonTriggers(journalEntries: JournalEntry[]): Array<{ trigger: string; count: number }> {
+  const triggerCounts: { [key: string]: number } = {};
+
+  journalEntries.forEach(entry => {
+    if (entry.triggers && Array.isArray(entry.triggers)) {
+      entry.triggers.forEach(trigger => {
+        triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
+      });
+    }
+  });
+
+  const sortedTriggers = Object.entries(triggerCounts)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .slice(0, 3)
+    .map(([trigger, count]) => ({ trigger, count }));
+
+  console.log('[Progress] Most common triggers:', sortedTriggers);
+  
+  return sortedTriggers;
+}
+
 export default function ProgressScreen() {
   const [stats, setStats] = useState<JournalStats | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
@@ -299,6 +346,14 @@ export default function ProgressScreen() {
     return Math.round((count / total) * 100);
   };
 
+  // Memoized calculations
+  const currentStreak = useMemo(() => calculateStreak(profile?.sobriety_date), [profile?.sobriety_date]);
+  const cravingsThisWeek = useMemo(() => calculateCravingsThisWeek(journalEntries), [journalEntries]);
+  const avgIntensityThisWeek = useMemo(() => calculateAvgIntensityThisWeek(journalEntries), [journalEntries]);
+  const daysSinceLastUsed = useMemo(() => calculateDaysSinceLastUsed(journalEntries), [journalEntries]);
+  const mostUsedTools = useMemo(() => calculateMostUsedTools(journalEntries), [journalEntries]);
+  const mostCommonTriggers = useMemo(() => calculateMostCommonTriggers(journalEntries), [journalEntries]);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -307,13 +362,12 @@ export default function ProgressScreen() {
     );
   }
 
-  const currentStreak = calculateStreak(profile?.sobriety_date);
   const streakDaysText = currentStreak === 1 ? 'Day' : 'Days';
   const streakSubtitleText = 'Days of sobriety';
   
-  const cravingsThisWeek = calculateCravingsThisWeek(journalEntries);
-  const avgIntensityThisWeek = calculateAvgIntensityThisWeek(journalEntries);
-  const daysSinceLastUsed = calculateDaysSinceLastUsed(journalEntries);
+  const avgIntensityWeekDisplay = avgIntensityThisWeek !== null 
+    ? avgIntensityThisWeek.toFixed(1) 
+    : null;
 
   if (!stats || stats.totalEntries === 0) {
     return (
@@ -360,10 +414,6 @@ export default function ProgressScreen() {
   const averageIntensityDisplay = stats.averageIntensity > 0 
     ? stats.averageIntensity.toFixed(1) 
     : 'N/A';
-  
-  const avgIntensityWeekDisplay = avgIntensityThisWeek !== null 
-    ? avgIntensityThisWeek.toFixed(1) 
-    : null;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -515,30 +565,12 @@ export default function ProgressScreen() {
           )}
         </View>
 
-        {stats.commonTriggers.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Common Triggers</Text>
-            <View style={styles.triggersList}>
-              {stats.commonTriggers.slice(0, 5).map((trigger, index) => (
-                <View key={index} style={styles.triggerItem}>
-                  <IconSymbol
-                    ios_icon_name="warning"
-                    android_material_icon_name="warning"
-                    size={16}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={styles.triggerText}>{trigger}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {stats.commonTools.length > 0 && (
+        {/* Most Used Tools - Calculated from journal entries */}
+        {mostUsedTools.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Most Used Tools</Text>
             <View style={styles.triggersList}>
-              {stats.commonTools.slice(0, 5).map((tool, index) => (
+              {mostUsedTools.map((item, index) => (
                 <View key={index} style={styles.triggerItem}>
                   <IconSymbol
                     ios_icon_name="check"
@@ -546,7 +578,29 @@ export default function ProgressScreen() {
                     size={16}
                     color={colors.textSecondary}
                   />
-                  <Text style={styles.triggerText}>{tool}</Text>
+                  <Text style={styles.triggerText}>{item.tool}</Text>
+                  <Text style={styles.triggerCount}>{item.count}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Most Common Triggers - NEW SECTION */}
+        {mostCommonTriggers.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Most Common Triggers</Text>
+            <View style={styles.triggersList}>
+              {mostCommonTriggers.map((item, index) => (
+                <View key={index} style={styles.triggerItem}>
+                  <IconSymbol
+                    ios_icon_name="warning"
+                    android_material_icon_name="warning"
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={styles.triggerText}>{item.trigger}</Text>
+                  <Text style={styles.triggerCount}>{item.count}</Text>
                 </View>
               ))}
             </View>
