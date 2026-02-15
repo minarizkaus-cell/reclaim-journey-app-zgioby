@@ -38,17 +38,25 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <SystemBars style={colorScheme === "dark" ? "light" : "dark"} />
+        <SystemBars style="light" />
         <AuthProvider>
           <WidgetProvider>
             <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="auth" options={{ headerShown: false }} />
               <Stack.Screen name="auth-popup" options={{ headerShown: false }} />
               <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="craving-flow" options={{ headerShown: false }} />
+              <Stack.Screen name="journal" options={{ headerShown: false }} />
+              <Stack.Screen name="journal-add" options={{ presentation: "modal", headerShown: true, title: "Add Journal Entry" }} />
+              <Stack.Screen name="journal-detail" options={{ headerShown: true, title: "Journal Entry" }} />
+              <Stack.Screen name="calendar" options={{ headerShown: true, title: "Calendar" }} />
+              <Stack.Screen name="resources" options={{ headerShown: true, title: "Resources" }} />
               <Stack.Screen name="+not-found" />
             </Stack>
-            <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+            <StatusBar style="light" />
           </WidgetProvider>
         </AuthProvider>
       </ThemeProvider>

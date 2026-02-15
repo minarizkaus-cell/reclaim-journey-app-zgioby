@@ -21,22 +21,28 @@ export default function TabLayout() {
 
   const tabs = [
     {
-      name: 'Journal',
+      name: 'Home',
       route: '/(tabs)/(home)/',
-      ios_icon_name: 'book.fill',
-      android_material_icon_name: 'book' as const,
+      ios_icon_name: 'house.fill',
+      android_material_icon_name: 'home' as const,
+    },
+    {
+      name: 'Coping Tools',
+      route: '/(tabs)/coping-tools',
+      ios_icon_name: 'heart.fill',
+      android_material_icon_name: 'favorite' as const,
     },
     {
       name: 'Progress',
       route: '/(tabs)/progress',
       ios_icon_name: 'chart.bar.fill',
-      android_material_icon_name: 'bar-chart' as const,
+      android_material_icon_name: 'trending-up' as const,
     },
     {
-      name: 'Profile',
-      route: '/(tabs)/profile',
-      ios_icon_name: 'person.fill',
-      android_material_icon_name: 'person' as const,
+      name: 'Settings',
+      route: '/(tabs)/settings',
+      ios_icon_name: 'gearshape.fill',
+      android_material_icon_name: 'settings' as const,
     },
   ];
 

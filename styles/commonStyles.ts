@@ -1,47 +1,43 @@
 
 import { StyleSheet } from 'react-native';
 
-// Recovery Support App - Calming, supportive color palette
+// MyRecovery App - Dark theme with specified colors
 export const colors = {
-  // Light mode
-  light: {
-    background: '#F5F7FA',
-    card: '#FFFFFF',
-    text: '#1A202C',
-    textSecondary: '#718096',
-    primary: '#667EEA', // Calming purple
-    secondary: '#48BB78', // Hopeful green
-    accent: '#ED8936', // Warm orange
-    highlight: '#EDF2F7',
-    border: '#E2E8F0',
-    success: '#48BB78',
-    warning: '#ED8936',
-    error: '#F56565',
-    moodGreat: '#48BB78',
-    moodGood: '#68D391',
-    moodOkay: '#ECC94B',
-    moodStruggling: '#ED8936',
-    moodDifficult: '#F56565',
-  },
-  // Dark mode
+  // Dark mode (primary theme)
   dark: {
-    background: '#1A202C',
-    card: '#2D3748',
-    text: '#F7FAFC',
-    textSecondary: '#A0AEC0',
-    primary: '#7F9CF5',
-    secondary: '#68D391',
-    accent: '#F6AD55',
-    highlight: '#2D3748',
-    border: '#4A5568',
-    success: '#68D391',
-    warning: '#F6AD55',
-    error: '#FC8181',
-    moodGreat: '#68D391',
-    moodGood: '#9AE6B4',
-    moodOkay: '#F6E05E',
-    moodStruggling: '#F6AD55',
-    moodDifficult: '#FC8181',
+    background: '#0F1115',
+    card: 'rgba(255,255,255,0.03)',
+    border: 'rgba(255,255,255,0.08)',
+    text: '#FFFFFF',
+    textSecondary: 'rgba(255,255,255,0.6)',
+    primary: '#E57373',
+    primaryDark: '#D35F5F',
+    success: '#81C784',
+    warning: '#FFB74D',
+    error: '#E57373',
+    moodGreat: '#81C784',
+    moodGood: '#AED581',
+    moodOkay: '#FFD54F',
+    moodStruggling: '#FFB74D',
+    moodDifficult: '#E57373',
+  },
+  // Light mode (fallback)
+  light: {
+    background: '#FFFFFF',
+    card: '#F5F5F5',
+    border: '#E0E0E0',
+    text: '#0F1115',
+    textSecondary: 'rgba(0,0,0,0.6)',
+    primary: '#E57373',
+    primaryDark: '#D35F5F',
+    success: '#81C784',
+    warning: '#FFB74D',
+    error: '#E57373',
+    moodGreat: '#81C784',
+    moodGood: '#AED581',
+    moodOkay: '#FFD54F',
+    moodStruggling: '#FFB74D',
+    moodDifficult: '#E57373',
   },
 };
 
@@ -53,11 +49,6 @@ export const commonStyles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   title: {
     fontSize: 28,
