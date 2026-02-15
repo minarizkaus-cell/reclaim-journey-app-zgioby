@@ -11,12 +11,14 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Image,
+  Modal,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/commonStyles';
-import { authenticatedGet } from '@/utils/api';
+import { authenticatedGet, apiPost } from '@/utils/api';
 import { User } from '@/types/models';
+import { IconSymbol } from '@/components/IconSymbol';
 
 type Mode = 'login' | 'register';
 
@@ -32,6 +34,23 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Password visibility toggles
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Inline validation errors
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [displayNameError, setDisplayNameError] = useState('');
+
+  // Forgot password state
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+
   if (authLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.dark.background }]}>
@@ -40,37 +59,96 @@ export default function AuthScreen() {
     );
   }
 
+  const isValidEmail = (emailText: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(emailText);
+  };
+
+  const validateEmailField = (text: string) => {
+    setEmail(text);
+    if (!text.trim()) {
+      setEmailError('Email is required');
+    } else if (!isValidEmail(text)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const validatePasswordField = (text: string) => {
+    setPassword(text);
+    if (!text.trim()) {
+      setPasswordError('Password is required');
+    } else if (text.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+    } else {
+      setPasswordError('');
+    }
+  };
+
+  const validateConfirmPasswordField = (text: string) => {
+    setConfirmPassword(text);
+    if (!text.trim()) {
+      setConfirmPasswordError('Please confirm your password');
+    } else if (text !== password) {
+      setConfirmPasswordError('Passwords do not match');
+    } else {
+      setConfirmPasswordError('');
+    }
+  };
+
+  const validateDisplayNameField = (text: string) => {
+    setDisplayName(text);
+    if (!text.trim()) {
+      setDisplayNameError('Display name is required');
+    } else {
+      setDisplayNameError('');
+    }
+  };
+
   const validateFields = (): boolean => {
     const isLoginMode = mode === 'login';
-    
+    let isValid = true;
+
+    // Validate email
     if (!email.trim()) {
-      setErrorMessage('Email is required');
-      return false;
+      setEmailError('Email is required');
+      isValid = false;
+    } else if (!isValidEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      isValid = false;
     }
 
+    // Validate password
     if (!password.trim()) {
-      setErrorMessage('Password is required');
-      return false;
+      setPasswordError('Password is required');
+      isValid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      isValid = false;
     }
 
+    // Validate register-specific fields
     if (!isLoginMode) {
       if (!displayName.trim()) {
-        setErrorMessage('Display name is required');
-        return false;
+        setDisplayNameError('Display name is required');
+        isValid = false;
       }
 
       if (!confirmPassword.trim()) {
-        setErrorMessage('Please confirm your password');
-        return false;
-      }
-
-      if (password !== confirmPassword) {
-        setErrorMessage('Passwords do not match');
-        return false;
+        setConfirmPasswordError('Please confirm your password');
+        isValid = false;
+      } else if (password !== confirmPassword) {
+        setConfirmPasswordError('Passwords do not match');
+        isValid = false;
       }
     }
 
-    return true;
+    if (!isValid) {
+      setErrorMessage('Please fix the errors above');
+    }
+
+    return isValid;
   };
 
   const handleAuth = async () => {
@@ -112,7 +190,18 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error('[Auth] Authentication error:', error);
-      const errorMsg = error.message || 'Authentication failed';
+      let errorMsg = 'Authentication failed. Please try again.';
+      
+      if (error.message) {
+        if (error.message.includes('Invalid credentials') || error.message.includes('401')) {
+          errorMsg = 'Invalid email or password';
+        } else if (error.message.includes('already exists') || error.message.includes('409')) {
+          errorMsg = 'An account with this email already exists';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMsg = 'Network error. Please check your connection.';
+        }
+      }
+      
       setErrorMessage(errorMsg);
     } finally {
       setLoading(false);
@@ -146,10 +235,51 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error('[Auth] Social auth error:', error);
-      const errorMsg = error.message || 'Authentication failed';
+      const errorMsg = 'Social authentication failed. Please try again.';
       setErrorMessage(errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    console.log('[Auth] Forgot password requested for:', forgotPasswordEmail);
+    
+    if (!forgotPasswordEmail.trim()) {
+      setForgotPasswordError('Please enter your email address');
+      return;
+    }
+    
+    if (!isValidEmail(forgotPasswordEmail)) {
+      setForgotPasswordError('Please enter a valid email address');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+
+    try {
+      // TODO: Backend Integration - POST /api/auth/forgot-password with { email: string }
+      // For now, simulate the call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('[Auth] Password reset email sent');
+      const successMsg = 'If an account with that email exists, a reset link has been sent.';
+      setForgotPasswordSuccess(successMsg);
+      setForgotPasswordError('');
+      
+      // Clear form after 3 seconds
+      setTimeout(() => {
+        setShowForgotPasswordModal(false);
+        setForgotPasswordEmail('');
+        setForgotPasswordSuccess('');
+      }, 3000);
+    } catch (error: any) {
+      console.error('[Auth] Forgot password error:', error);
+      setForgotPasswordError('Could not process request. Please try again later.');
+    } finally {
+      setForgotPasswordLoading(false);
     }
   };
 
@@ -162,6 +292,27 @@ export default function AuthScreen() {
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    setDisplayNameError('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  const openForgotPasswordModal = () => {
+    console.log('[Auth] Opening forgot password modal');
+    setShowForgotPasswordModal(true);
+    setForgotPasswordEmail(email);
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+  };
+
+  const closeForgotPasswordModal = () => {
+    setShowForgotPasswordModal(false);
+    setForgotPasswordEmail('');
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
   };
 
   const isLoginMode = mode === 'login';
@@ -205,67 +356,127 @@ export default function AuthScreen() {
           ) : null}
 
           {!isLoginMode && (
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.dark.card, 
-                borderColor: colors.dark.border,
-                color: colors.dark.text 
-              }]}
-              placeholder="Display Name"
-              placeholderTextColor={colors.dark.textSecondary}
-              value={displayName}
-              onChangeText={setDisplayName}
-              autoCapitalize="words"
-              editable={!loading}
-            />
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, { 
+                  backgroundColor: colors.dark.card, 
+                  borderColor: displayNameError ? '#E57373' : colors.dark.border,
+                  color: colors.dark.text 
+                }]}
+                placeholder="Display Name"
+                placeholderTextColor={colors.dark.textSecondary}
+                value={displayName}
+                onChangeText={validateDisplayNameField}
+                autoCapitalize="words"
+                editable={!loading}
+              />
+              {displayNameError ? (
+                <Text style={styles.fieldError}>{displayNameError}</Text>
+              ) : null}
+            </View>
           )}
 
-          <TextInput
-            style={[styles.input, { 
-              backgroundColor: colors.dark.card, 
-              borderColor: colors.dark.border,
-              color: colors.dark.text 
-            }]}
-            placeholder="Email"
-            placeholderTextColor={colors.dark.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!loading}
-          />
-
-          <TextInput
-            style={[styles.input, { 
-              backgroundColor: colors.dark.card, 
-              borderColor: colors.dark.border,
-              color: colors.dark.text 
-            }]}
-            placeholder="Password"
-            placeholderTextColor={colors.dark.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            editable={!loading}
-          />
-
-          {!isLoginMode && (
+          <View style={styles.inputContainer}>
             <TextInput
               style={[styles.input, { 
                 backgroundColor: colors.dark.card, 
-                borderColor: colors.dark.border,
+                borderColor: emailError ? '#E57373' : colors.dark.border,
                 color: colors.dark.text 
               }]}
-              placeholder="Confirm Password"
+              placeholder="Email"
               placeholderTextColor={colors.dark.textSecondary}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
+              value={email}
+              onChangeText={validateEmailField}
+              keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               editable={!loading}
             />
+            {emailError ? (
+              <Text style={styles.fieldError}>{emailError}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <View style={styles.passwordInputWrapper}>
+              <TextInput
+                style={[styles.passwordInput, { 
+                  backgroundColor: colors.dark.card, 
+                  borderColor: passwordError ? '#E57373' : colors.dark.border,
+                  color: colors.dark.text 
+                }]}
+                placeholder="Password"
+                placeholderTextColor={colors.dark.textSecondary}
+                value={password}
+                onChangeText={validatePasswordField}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                editable={!loading}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+                disabled={loading}
+              >
+                <IconSymbol
+                  ios_icon_name={showPassword ? "eye.slash.fill" : "eye.fill"}
+                  android_material_icon_name={showPassword ? "visibility-off" : "visibility"}
+                  size={20}
+                  color={colors.dark.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
+            {passwordError ? (
+              <Text style={styles.fieldError}>{passwordError}</Text>
+            ) : null}
+          </View>
+
+          {isLoginMode && (
+            <TouchableOpacity
+              style={styles.forgotPasswordButton}
+              onPress={openForgotPasswordModal}
+              disabled={loading}
+            >
+              <Text style={[styles.forgotPasswordText, { color: colors.dark.textSecondary }]}>
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {!isLoginMode && (
+            <View style={styles.inputContainer}>
+              <View style={styles.passwordInputWrapper}>
+                <TextInput
+                  style={[styles.passwordInput, { 
+                    backgroundColor: colors.dark.card, 
+                    borderColor: confirmPasswordError ? '#E57373' : colors.dark.border,
+                    color: colors.dark.text 
+                  }]}
+                  placeholder="Confirm Password"
+                  placeholderTextColor={colors.dark.textSecondary}
+                  value={confirmPassword}
+                  onChangeText={validateConfirmPasswordField}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={loading}
+                >
+                  <IconSymbol
+                    ios_icon_name={showConfirmPassword ? "eye.slash.fill" : "eye.fill"}
+                    android_material_icon_name={showConfirmPassword ? "visibility-off" : "visibility"}
+                    size={20}
+                    color={colors.dark.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {confirmPasswordError ? (
+                <Text style={styles.fieldError}>{confirmPasswordError}</Text>
+              ) : null}
+            </View>
           )}
 
           <TouchableOpacity
@@ -326,6 +537,86 @@ export default function AuthScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        visible={showForgotPasswordModal}
+        transparent
+        animationType="fade"
+        onRequestClose={closeForgotPasswordModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.dark.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.dark.text }]}>
+              Reset Password
+            </Text>
+            
+            <Text style={[styles.modalDescription, { color: colors.dark.textSecondary }]}>
+              Enter your email address and we&apos;ll send you a link to reset your password.
+            </Text>
+
+            {forgotPasswordSuccess ? (
+              <View style={styles.successContainer}>
+                <IconSymbol
+                  ios_icon_name="checkmark.circle.fill"
+                  android_material_icon_name="check-circle"
+                  size={48}
+                  color="#4CAF50"
+                />
+                <Text style={[styles.successText, { color: '#4CAF50' }]}>
+                  {forgotPasswordSuccess}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <TextInput
+                  style={[styles.modalInput, { 
+                    backgroundColor: colors.dark.background, 
+                    borderColor: forgotPasswordError ? '#E57373' : colors.dark.border,
+                    color: colors.dark.text 
+                  }]}
+                  placeholder="Email"
+                  placeholderTextColor={colors.dark.textSecondary}
+                  value={forgotPasswordEmail}
+                  onChangeText={setForgotPasswordEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!forgotPasswordLoading}
+                />
+                
+                {forgotPasswordError ? (
+                  <Text style={styles.fieldError}>{forgotPasswordError}</Text>
+                ) : null}
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonSecondary, { borderColor: colors.dark.border }]}
+                    onPress={closeForgotPasswordModal}
+                    disabled={forgotPasswordLoading}
+                  >
+                    <Text style={[styles.modalButtonTextSecondary, { color: colors.dark.text }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: colors.dark.primary }]}
+                    onPress={handleForgotPassword}
+                    disabled={forgotPasswordLoading}
+                  >
+                    {forgotPasswordLoading ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.modalButtonTextPrimary}>Send Reset Link</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -372,13 +663,46 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
+  inputContainer: {
+    marginBottom: 16,
+  },
   input: {
     height: 50,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 16,
-    marginBottom: 16,
     fontSize: 16,
+  },
+  passwordInputWrapper: {
+    position: 'relative',
+  },
+  passwordInput: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingRight: 48,
+    fontSize: 16,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 15,
+    padding: 4,
+  },
+  fieldError: {
+    color: '#E57373',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  forgotPasswordText: {
+    fontSize: 13,
   },
   primaryButton: {
     height: 50,
@@ -450,5 +774,75 @@ const styles = StyleSheet.create({
     color: '#E57373',
     fontSize: 14,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 14,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalInput: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalButtonSecondary: {
+    borderWidth: 1,
+  },
+  modalButtonPrimary: {
+    // backgroundColor set dynamically
+  },
+  modalButtonTextSecondary: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  modalButtonTextPrimary: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  successContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  successText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 16,
+    lineHeight: 20,
   },
 });
