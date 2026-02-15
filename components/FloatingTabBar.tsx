@@ -159,7 +159,7 @@ export default function FloatingTabBar({
         styles.container,
         {
           width: containerWidth,
-          marginBottom: bottomMargin ?? 20
+          marginBottom: bottomMargin ?? 100
         }
       ]}>
         <BlurView
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 100,
+    zIndex: 50,
     alignItems: 'center',
   },
   container: {
