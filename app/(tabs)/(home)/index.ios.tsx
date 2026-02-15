@@ -10,147 +10,189 @@ import {
   useColorScheme,
   ActivityIndicator,
   RefreshControl,
+  Image,
+  Linking,
+  Modal,
 } from 'react-native';
 import { colors } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { authenticatedGet } from '@/utils/api';
-import { JournalEntry } from '@/types/models';
+import { User } from '@/types/models';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.dark.background,
   },
-  addButton: {
-    backgroundColor: colors.primary,
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  entriesList: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  entryCard: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  entryHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
-  outcomeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  logo: {
+    width: 120,
+    height: 40,
+    resizeMode: 'contain',
   },
-  outcomeText: {
+  settingsButton: {
+    padding: 8,
+  },
+  welcomeSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  welcomeText: {
     fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
+    color: colors.dark.textSecondary,
+    marginBottom: 4,
   },
-  dateText: {
-    fontSize: 14,
-    color: colors.textSecondary,
+  displayName: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.dark.text,
+    marginBottom: 4,
   },
-  cravingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+  subtitle: {
+    fontSize: 16,
+    color: colors.dark.textSecondary,
   },
-  cravingText: {
-    fontSize: 14,
-    color: colors.text,
-    marginLeft: 8,
-  },
-  intensityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  intensityText: {
-    fontSize: 14,
-    color: colors.text,
-    marginLeft: 8,
-  },
-  triggersContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 8,
-  },
-  triggerChip: {
-    backgroundColor: colors.background,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  cravingButton: {
+    backgroundColor: colors.dark.primary,
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 20,
     borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
+    alignItems: 'center',
   },
-  triggerText: {
-    fontSize: 12,
-    color: colors.text,
+  cravingButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
   },
-  notesText: {
+  cravingButtonSubtitle: {
     fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 8,
-    fontStyle: 'italic',
+    color: 'rgba(255,255,255,0.8)',
   },
-  emptyContainer: {
+  tilesContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  tilesRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  tile: {
+    flex: 1,
+    backgroundColor: colors.dark.card,
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 6,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
+    minHeight: 120,
   },
-  emptyText: {
-    fontSize: 16,
-    color: colors.textSecondary,
+  tileIcon: {
+    marginBottom: 12,
+  },
+  tileText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.dark.text,
     textAlign: 'center',
-    marginTop: 16,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.dark.background,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.dark.card,
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.dark.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: colors.dark.textSecondary,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginHorizontal: 6,
+  },
+  modalButtonCancel: {
+    backgroundColor: colors.dark.background,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  modalButtonConfirm: {
+    backgroundColor: colors.dark.primary,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.dark.text,
+  },
+  modalButtonTextConfirm: {
+    color: '#FFFFFF',
   },
 });
 
-export default function JournalScreen() {
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
+export default function HomeScreen() {
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const { user } = useAuth();
 
   useEffect(() => {
-    loadEntries();
+    loadProfile();
   }, []);
 
-  const loadEntries = async () => {
+  const loadProfile = async () => {
     try {
-      console.log('Loading journal entries...');
-      // TODO: Backend Integration - GET /api/journal → [{ id, created_at, had_craving, triggers, intensity, tools_used, outcome, notes }]
-      const data = await authenticatedGet<JournalEntry[]>('/api/journal');
-      console.log('Loaded entries:', data);
-      setEntries(data);
+      console.log('[Home] Loading user profile...');
+      const data = await authenticatedGet<User>('/api/user/profile');
+      console.log('[Home] Profile loaded:', data);
+      setProfile(data);
     } catch (error) {
-      console.error('Failed to load entries:', error);
+      console.error('[Home] Failed to load profile:', error);
     } finally {
       setLoading(false);
     }
@@ -158,202 +200,252 @@ export default function JournalScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadEntries();
+    await loadProfile();
     setRefreshing(false);
   };
 
-  const getOutcomeColor = (outcome: string) => {
-    switch (outcome) {
-      case 'resisted':
-        return '#4CAF50';
-      case 'partial':
-        return '#FF9800';
-      case 'used':
-        return colors.primary;
-      default:
-        return colors.text;
-    }
-  };
-
-  const getOutcomeIcon = (outcome: string) => {
-    switch (outcome) {
-      case 'resisted':
-        return 'check-circle';
-      case 'partial':
-        return 'warning';
-      case 'used':
-        return 'error';
-      default:
-        return 'info';
-    }
-  };
-
-  const getOutcomeLabel = (outcome: string) => {
-    switch (outcome) {
-      case 'resisted':
-        return 'Resisted';
-      case 'partial':
-        return 'Partial';
-      case 'used':
-        return 'Used';
-      default:
-        return outcome;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
+  const handleCallEmergency = () => {
+    console.log('[Home] User tapped Call Emergency');
+    if (profile?.sponsor_phone) {
+      console.log('[Home] Opening dialer with sponsor phone:', profile.sponsor_phone);
+      Linking.openURL(`tel:${profile.sponsor_phone}`);
     } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      console.log('[Home] No sponsor phone set, showing modal');
+      setShowModal(true);
     }
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const handleModalGoToSettings = () => {
+    console.log('[Home] User chose to go to Settings');
+    setShowModal(false);
+    router.push('/(tabs)/settings');
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.dark.primary} />
       </View>
     );
   }
 
-  const displayName = user?.display_name || user?.email || 'there';
+  const displayName = profile?.display_name || user?.name || user?.email?.split('@')[0] || 'there';
+  const welcomeBackText = 'Welcome back';
+  const subtitleText = 'One day at a time';
+  const cravingButtonText = "I'M HAVING A CRAVING";
+  const cravingButtonSubtitle = 'Start a guided reset';
 
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: 'Journal',
-          headerLargeTitle: true,
+          headerShown: false,
         }}
       />
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => {
-          console.log('User tapped Add Entry button');
-          router.push('/journal-add');
-        }}
-      >
-        <IconSymbol
-          ios_icon_name="plus"
-          android_material_icon_name="add"
-          size={24}
-          color="#FFFFFF"
-        />
-        <Text style={styles.addButtonText}>Add Entry</Text>
-      </TouchableOpacity>
-
       <ScrollView
-        style={styles.entriesList}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.dark.primary}
+          />
         }
       >
-        {entries.length === 0 ? (
-          <View style={styles.emptyContainer}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Image
+            source={require('@/assets/images/natively-dark.png')}
+            style={styles.logo}
+          />
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => {
+              console.log('[Home] User tapped Settings button');
+              router.push('/(tabs)/settings');
+            }}
+          >
             <IconSymbol
-              ios_icon_name="book"
-              android_material_icon_name="menu-book"
-              size={64}
-              color={colors.textSecondary}
+              ios_icon_name="gear"
+              android_material_icon_name="settings"
+              size={28}
+              color={colors.dark.text}
             />
-            <Text style={styles.emptyText}>
-              No journal entries yet.{'\n'}Tap "Add Entry" to get started.
-            </Text>
-          </View>
-        ) : (
-          entries.map((entry) => {
-            const outcomeColor = getOutcomeColor(entry.outcome);
-            const outcomeIcon = getOutcomeIcon(entry.outcome);
-            const outcomeLabel = getOutcomeLabel(entry.outcome);
-            const dateDisplay = formatDate(entry.created_at);
-            const timeDisplay = formatTime(entry.created_at);
-            const cravingLabel = entry.had_craving ? 'Had craving' : 'No craving';
-            const intensityLabel = entry.intensity !== undefined && entry.intensity !== null
-              ? `Intensity: ${entry.intensity}/10`
-              : null;
+          </TouchableOpacity>
+        </View>
 
-            return (
+        {/* Welcome Section */}
+        <View style={styles.welcomeSection}>
+          <Text style={styles.welcomeText}>{welcomeBackText}</Text>
+          <Text style={styles.displayName}>{displayName}</Text>
+          <Text style={styles.subtitle}>{subtitleText}</Text>
+        </View>
+
+        {/* Primary Craving Button */}
+        <TouchableOpacity
+          style={styles.cravingButton}
+          onPress={() => {
+            console.log('[Home] User tapped craving button');
+            router.push('/craving-flow');
+          }}
+        >
+          <Text style={styles.cravingButtonText}>{cravingButtonText}</Text>
+          <Text style={styles.cravingButtonSubtitle}>{cravingButtonSubtitle}</Text>
+        </TouchableOpacity>
+
+        {/* 2-Column Grid Tiles */}
+        <View style={styles.tilesContainer}>
+          {/* Row 1: Journal, Calendar */}
+          <View style={styles.tilesRow}>
+            <TouchableOpacity
+              style={styles.tile}
+              onPress={() => {
+                console.log('[Home] User tapped Journal tile');
+                router.push('/journal');
+              }}
+            >
+              <View style={styles.tileIcon}>
+                <IconSymbol
+                  ios_icon_name="book"
+                  android_material_icon_name="menu-book"
+                  size={32}
+                  color={colors.dark.text}
+                />
+              </View>
+              <Text style={styles.tileText}>Journal</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.tile}
+              onPress={() => {
+                console.log('[Home] User tapped Calendar tile');
+                router.push('/calendar');
+              }}
+            >
+              <View style={styles.tileIcon}>
+                <IconSymbol
+                  ios_icon_name="calendar"
+                  android_material_icon_name="calendar-today"
+                  size={32}
+                  color={colors.dark.text}
+                />
+              </View>
+              <Text style={styles.tileText}>Calendar</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Row 2: Progress, Coping Tools */}
+          <View style={styles.tilesRow}>
+            <TouchableOpacity
+              style={styles.tile}
+              onPress={() => {
+                console.log('[Home] User tapped Progress tile');
+                router.push('/(tabs)/progress');
+              }}
+            >
+              <View style={styles.tileIcon}>
+                <IconSymbol
+                  ios_icon_name="chart"
+                  android_material_icon_name="show-chart"
+                  size={32}
+                  color={colors.dark.text}
+                />
+              </View>
+              <Text style={styles.tileText}>Progress</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.tile}
+              onPress={() => {
+                console.log('[Home] User tapped Coping Tools tile');
+                router.push('/(tabs)/coping-tools');
+              }}
+            >
+              <View style={styles.tileIcon}>
+                <IconSymbol
+                  ios_icon_name="heart"
+                  android_material_icon_name="favorite"
+                  size={32}
+                  color={colors.dark.text}
+                />
+              </View>
+              <Text style={styles.tileText}>Coping Tools</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Row 3: Resources, Call Emergency */}
+          <View style={styles.tilesRow}>
+            <TouchableOpacity
+              style={styles.tile}
+              onPress={() => {
+                console.log('[Home] User tapped Resources tile');
+                router.push('/resources');
+              }}
+            >
+              <View style={styles.tileIcon}>
+                <IconSymbol
+                  ios_icon_name="info"
+                  android_material_icon_name="info"
+                  size={32}
+                  color={colors.dark.text}
+                />
+              </View>
+              <Text style={styles.tileText}>Resources</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.tile}
+              onPress={handleCallEmergency}
+            >
+              <View style={styles.tileIcon}>
+                <IconSymbol
+                  ios_icon_name="phone"
+                  android_material_icon_name="phone"
+                  size={32}
+                  color={colors.dark.primary}
+                />
+              </View>
+              <Text style={styles.tileText}>Call Emergency</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Modal for missing sponsor phone */}
+      <Modal
+        visible={showModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>No Emergency Contact</Text>
+            <Text style={styles.modalMessage}>
+              You haven't set up a sponsor phone number yet. Would you like to add one in Settings?
+            </Text>
+            <View style={styles.modalButtons}>
               <TouchableOpacity
-                key={entry.id}
-                style={styles.entryCard}
+                style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => {
-                  console.log('User tapped journal entry:', entry.id);
-                  router.push(`/journal-detail?id=${entry.id}`);
+                  console.log('[Home] User cancelled modal');
+                  setShowModal(false);
                 }}
               >
-                <View style={styles.entryHeader}>
-                  <View style={styles.outcomeContainer}>
-                    <IconSymbol
-                      ios_icon_name={outcomeIcon}
-                      android_material_icon_name={outcomeIcon}
-                      size={24}
-                      color={outcomeColor}
-                    />
-                    <Text style={[styles.outcomeText, { color: outcomeColor }]}>
-                      {outcomeLabel}
-                    </Text>
-                  </View>
-                  <Text style={styles.dateText}>
-                    {dateDisplay}
-                  </Text>
-                </View>
-
-                <View style={styles.cravingRow}>
-                  <IconSymbol
-                    ios_icon_name="info"
-                    android_material_icon_name="info"
-                    size={16}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={styles.cravingText}>{cravingLabel}</Text>
-                </View>
-
-                {intensityLabel && (
-                  <View style={styles.intensityRow}>
-                    <IconSymbol
-                      ios_icon_name="chart"
-                      android_material_icon_name="show-chart"
-                      size={16}
-                      color={colors.textSecondary}
-                    />
-                    <Text style={styles.intensityText}>{intensityLabel}</Text>
-                  </View>
-                )}
-
-                {entry.triggers.length > 0 && (
-                  <View style={styles.triggersContainer}>
-                    {entry.triggers.map((trigger, index) => (
-                      <View key={index} style={styles.triggerChip}>
-                        <Text style={styles.triggerText}>{trigger}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {entry.notes && (
-                  <Text style={styles.notesText} numberOfLines={2}>
-                    {entry.notes}
-                  </Text>
-                )}
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={handleModalGoToSettings}
+              >
+                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                  Go to Settings
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
