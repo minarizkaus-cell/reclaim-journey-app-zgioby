@@ -9,7 +9,6 @@ import {
   useColorScheme,
   Linking,
 } from 'react-native';
-import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -126,107 +125,98 @@ export default function ResourcesScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Resources',
-          headerBackTitle: 'Back',
-        }}
-      />
-      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={[styles.emergencyBanner, { backgroundColor: themeColors.primary }]}>
-            <IconSymbol
-              ios_icon_name="exclamationmark.triangle.fill"
-              android_material_icon_name="warning"
-              size={24}
-              color="#FFFFFF"
-            />
-            <View style={styles.emergencyText}>
-              <Text style={styles.emergencyTitle}>In Crisis?</Text>
-              <Text style={styles.emergencySubtitle}>
-                If you&apos;re in immediate danger, call 911 or go to the nearest emergency room
-              </Text>
-            </View>
-          </View>
-
-          {resources.map((resource) => {
-            const typeColor = getTypeColor(resource.type);
-            const typeLabel = getTypeLabel(resource.type);
-
-            return (
-              <View
-                key={resource.id}
-                style={[styles.resourceCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}
-              >
-                <View style={styles.resourceHeader}>
-                  <View style={[styles.iconContainer, { backgroundColor: `${typeColor}20` }]}>
-                    <IconSymbol
-                      ios_icon_name="heart.fill"
-                      android_material_icon_name={resource.icon}
-                      size={28}
-                      color={typeColor}
-                    />
-                  </View>
-                  <View style={[styles.typeBadge, { backgroundColor: `${typeColor}20` }]}>
-                    <Text style={[styles.typeText, { color: typeColor }]}>{typeLabel}</Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.resourceTitle, { color: themeColors.text }]}>{resource.title}</Text>
-                <Text style={[styles.resourceDescription, { color: themeColors.textSecondary }]}>
-                  {resource.description}
-                </Text>
-
-                <View style={styles.actionsContainer}>
-                  {resource.phone && (
-                    <TouchableOpacity
-                      style={[styles.actionButton, { backgroundColor: themeColors.primary }]}
-                      onPress={() => handlePhonePress(resource.phone!)}
-                    >
-                      <IconSymbol
-                        ios_icon_name="phone.fill"
-                        android_material_icon_name="phone"
-                        size={20}
-                        color="#FFFFFF"
-                      />
-                      <Text style={styles.actionButtonText}>{resource.phone}</Text>
-                    </TouchableOpacity>
-                  )}
-                  {resource.website && (
-                    <TouchableOpacity
-                      style={[styles.actionButton, { backgroundColor: themeColors.border }]}
-                      onPress={() => handleWebsitePress(resource.website!)}
-                    >
-                      <IconSymbol
-                        ios_icon_name="globe"
-                        android_material_icon_name="language"
-                        size={20}
-                        color={themeColors.text}
-                      />
-                      <Text style={[styles.actionButtonText, { color: themeColors.text }]}>Visit Website</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            );
-          })}
-
-          <View style={[styles.disclaimerCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
-            <IconSymbol
-              ios_icon_name="info.circle.fill"
-              android_material_icon_name="info"
-              size={24}
-              color={themeColors.textSecondary}
-            />
-            <Text style={[styles.disclaimerText, { color: themeColors.textSecondary }]}>
-              These resources are provided for informational purposes. MyRecovery is not affiliated with these organizations and does not provide medical advice.
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.emergencyBanner, { backgroundColor: themeColors.primary }]}>
+          <IconSymbol
+            ios_icon_name="exclamationmark.triangle.fill"
+            android_material_icon_name="warning"
+            size={24}
+            color="#FFFFFF"
+          />
+          <View style={styles.emergencyText}>
+            <Text style={styles.emergencyTitle}>In Crisis?</Text>
+            <Text style={styles.emergencySubtitle}>
+              If you&apos;re in immediate danger, call 911 or go to the nearest emergency room
             </Text>
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </>
+        </View>
+
+        {resources.map((resource) => {
+          const typeColor = getTypeColor(resource.type);
+          const typeLabel = getTypeLabel(resource.type);
+
+          return (
+            <View
+              key={resource.id}
+              style={[styles.resourceCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}
+            >
+              <View style={styles.resourceHeader}>
+                <View style={[styles.iconContainer, { backgroundColor: `${typeColor}20` }]}>
+                  <IconSymbol
+                    ios_icon_name="heart.fill"
+                    android_material_icon_name={resource.icon}
+                    size={28}
+                    color={typeColor}
+                  />
+                </View>
+                <View style={[styles.typeBadge, { backgroundColor: `${typeColor}20` }]}>
+                  <Text style={[styles.typeText, { color: typeColor }]}>{typeLabel}</Text>
+                </View>
+              </View>
+
+              <Text style={[styles.resourceTitle, { color: themeColors.text }]}>{resource.title}</Text>
+              <Text style={[styles.resourceDescription, { color: themeColors.textSecondary }]}>
+                {resource.description}
+              </Text>
+
+              <View style={styles.actionsContainer}>
+                {resource.phone && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: themeColors.primary }]}
+                    onPress={() => handlePhonePress(resource.phone!)}
+                  >
+                    <IconSymbol
+                      ios_icon_name="phone.fill"
+                      android_material_icon_name="phone"
+                      size={20}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.actionButtonText}>{resource.phone}</Text>
+                  </TouchableOpacity>
+                )}
+                {resource.website && (
+                  <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: themeColors.border }]}
+                    onPress={() => handleWebsitePress(resource.website!)}
+                  >
+                    <IconSymbol
+                      ios_icon_name="globe"
+                      android_material_icon_name="language"
+                      size={20}
+                      color={themeColors.text}
+                    />
+                    <Text style={[styles.actionButtonText, { color: themeColors.text }]}>Visit Website</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          );
+        })}
+
+        <View style={[styles.disclaimerCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
+          <IconSymbol
+            ios_icon_name="info.circle.fill"
+            android_material_icon_name="info"
+            size={24}
+            color={themeColors.textSecondary}
+          />
+          <Text style={[styles.disclaimerText, { color: themeColors.textSecondary }]}>
+            These resources are provided for informational purposes. MyRecovery is not affiliated with these organizations and does not provide medical advice.
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

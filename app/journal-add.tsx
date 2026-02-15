@@ -8,7 +8,6 @@ import {
   TextInput,
   useColorScheme,
 } from 'react-native';
-import { Stack } from 'expo-router';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { colors } from '@/styles/commonStyles';
@@ -114,14 +113,6 @@ export default function JournalAddScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
-      <Stack.Screen
-        options={{
-          title: 'New Entry',
-          headerShown: true,
-          presentation: 'modal',
-        }}
-      />
-
       <ScrollView style={styles.scrollContent}>
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Did you experience a craving?</Text>

@@ -11,7 +11,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -72,112 +71,109 @@ export default function JournalScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Journal',
-          headerBackTitle: 'Back',
-          headerRight: () => (
-            <TouchableOpacity onPress={() => router.push('/journal-add')}>
-              <IconSymbol
-                ios_icon_name="plus"
-                android_material_icon_name="add"
-                size={24}
-                color={themeColors.primary}
-              />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.primary} />
-          }
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={themeColors.primary} />
+        }
+      >
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: themeColors.primary }]}
+          onPress={() => {
+            console.log('[Journal] User tapped Add Entry button');
+            router.push('/journal-add');
+          }}
         >
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={themeColors.primary} />
-            </View>
-          ) : entries.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
-              <IconSymbol
-                ios_icon_name="book.fill"
-                android_material_icon_name="book"
-                size={64}
-                color={themeColors.textSecondary}
-              />
-              <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-                No journal entries yet
-              </Text>
-              <Text style={[styles.emptySubtext, { color: themeColors.textSecondary }]}>
-                Start tracking your journey by adding your first entry
-              </Text>
-            </View>
-          ) : (
-            entries.map((entry) => {
-              const moodColor = getMoodColor(entry.mood);
-              const dateText = formatDate(entry.createdAt);
-              const timeText = formatTime(entry.createdAt);
-              const moodText = entry.mood.charAt(0).toUpperCase() + entry.mood.slice(1);
+          <IconSymbol
+            ios_icon_name="plus"
+            android_material_icon_name="add"
+            size={20}
+            color="#FFFFFF"
+          />
+          <Text style={styles.addButtonText}>Add Entry</Text>
+        </TouchableOpacity>
 
-              return (
-                <TouchableOpacity
-                  key={entry.id}
-                  style={[styles.entryCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}
-                  onPress={() => router.push(`/journal-detail?id=${entry.id}`)}
-                >
-                  <View style={styles.entryHeader}>
-                    <View style={[styles.moodIndicator, { backgroundColor: moodColor }]} />
-                    <View style={styles.entryInfo}>
-                      <Text style={[styles.entryMood, { color: themeColors.text }]}>{moodText}</Text>
-                      <View style={styles.dateRow}>
-                        <Text style={[styles.entryDate, { color: themeColors.textSecondary }]}>
-                          {dateText}
-                        </Text>
-                        <Text style={[styles.entryDate, { color: themeColors.textSecondary }]}>
-                          {' • '}
-                        </Text>
-                        <Text style={[styles.entryDate, { color: themeColors.textSecondary }]}>
-                          {timeText}
-                        </Text>
-                      </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        ) : entries.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
+            <IconSymbol
+              ios_icon_name="book.fill"
+              android_material_icon_name="book"
+              size={64}
+              color={themeColors.textSecondary}
+            />
+            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+              No journal entries yet
+            </Text>
+            <Text style={[styles.emptySubtext, { color: themeColors.textSecondary }]}>
+              Start tracking your journey by adding your first entry
+            </Text>
+          </View>
+        ) : (
+          entries.map((entry) => {
+            const moodColor = getMoodColor(entry.mood);
+            const dateText = formatDate(entry.createdAt);
+            const timeText = formatTime(entry.createdAt);
+            const moodText = entry.mood.charAt(0).toUpperCase() + entry.mood.slice(1);
+
+            return (
+              <TouchableOpacity
+                key={entry.id}
+                style={[styles.entryCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}
+                onPress={() => router.push(`/journal-detail?id=${entry.id}`)}
+              >
+                <View style={styles.entryHeader}>
+                  <View style={[styles.moodIndicator, { backgroundColor: moodColor }]} />
+                  <View style={styles.entryInfo}>
+                    <Text style={[styles.entryMood, { color: themeColors.text }]}>{moodText}</Text>
+                    <View style={styles.dateRow}>
+                      <Text style={[styles.entryDate, { color: themeColors.textSecondary }]}>
+                        {dateText}
+                      </Text>
+                      <Text style={[styles.entryDate, { color: themeColors.textSecondary }]}>
+                        {' • '}
+                      </Text>
+                      <Text style={[styles.entryDate, { color: themeColors.textSecondary }]}>
+                        {timeText}
+                      </Text>
                     </View>
-                    <IconSymbol
-                      ios_icon_name="chevron.right"
-                      android_material_icon_name="chevron-right"
-                      size={20}
-                      color={themeColors.textSecondary}
-                    />
                   </View>
-                  {entry.notes && (
-                    <Text style={[styles.entryNotes, { color: themeColors.textSecondary }]} numberOfLines={2}>
-                      {entry.notes}
-                    </Text>
-                  )}
-                  {entry.triggers.length > 0 && (
-                    <View style={styles.triggersContainer}>
-                      {entry.triggers.slice(0, 3).map((trigger, index) => (
-                        <View key={index} style={[styles.triggerTag, { backgroundColor: `${themeColors.primary}20`, borderColor: themeColors.border, borderWidth: 1 }]}>
-                          <Text style={[styles.triggerText, { color: themeColors.primary }]}>{trigger}</Text>
-                        </View>
-                      ))}
-                      {entry.triggers.length > 3 && (
-                        <Text style={[styles.moreText, { color: themeColors.textSecondary }]}>
-                          +{entry.triggers.length - 3} more
-                        </Text>
-                      )}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </>
+                  <IconSymbol
+                    ios_icon_name="chevron.right"
+                    android_material_icon_name="chevron-right"
+                    size={20}
+                    color={themeColors.textSecondary}
+                  />
+                </View>
+                {entry.notes && (
+                  <Text style={[styles.entryNotes, { color: themeColors.textSecondary }]} numberOfLines={2}>
+                    {entry.notes}
+                  </Text>
+                )}
+                {entry.triggers.length > 0 && (
+                  <View style={styles.triggersContainer}>
+                    {entry.triggers.slice(0, 3).map((trigger, index) => (
+                      <View key={index} style={[styles.triggerTag, { backgroundColor: `${themeColors.primary}20`, borderColor: themeColors.border, borderWidth: 1 }]}>
+                        <Text style={[styles.triggerText, { color: themeColors.primary }]}>{trigger}</Text>
+                      </View>
+                    ))}
+                    {entry.triggers.length > 3 && (
+                      <Text style={[styles.moreText, { color: themeColors.textSecondary }]}>
+                        +{entry.triggers.length - 3} more
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -189,6 +185,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    gap: 8,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   loadingContainer: {
     padding: 40,

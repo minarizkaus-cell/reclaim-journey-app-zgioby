@@ -4,8 +4,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useColorScheme } from "react-native";
-import { Stack } from "expo-router";
+import { useColorScheme, TouchableOpacity, View, StyleSheet } from "react-native";
+import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import {
   DarkTheme,
@@ -14,9 +14,51 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { SystemBars } from "react-native-edge-to-edge";
+import { IconSymbol } from "@/components/IconSymbol";
+import { colors } from "@/styles/commonStyles";
 import "react-native-reanimated";
 
 SplashScreen.preventAutoHideAsync();
+
+function HeaderRightButtons() {
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const themeColors = isDark ? colors.dark : colors.light;
+
+  return (
+    <View style={styles.headerRightContainer}>
+      <TouchableOpacity
+        style={styles.headerButton}
+        onPress={() => {
+          console.log('[Header] User tapped Home icon');
+          router.push('/(tabs)/(home)/');
+        }}
+      >
+        <IconSymbol
+          ios_icon_name="house"
+          android_material_icon_name="home"
+          size={24}
+          color={themeColors.text}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.headerButton}
+        onPress={() => {
+          console.log('[Header] User tapped Settings icon');
+          router.push('/(tabs)/settings');
+        }}
+      >
+        <IconSymbol
+          ios_icon_name="gear"
+          android_material_icon_name="settings"
+          size={24}
+          color={themeColors.text}
+        />
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -53,7 +95,8 @@ export default function RootLayout() {
                 options={{ 
                   headerShown: true, 
                   title: "Craving Support",
-                  headerBackTitle: "Back"
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
                 }} 
               />
               <Stack.Screen 
@@ -61,7 +104,8 @@ export default function RootLayout() {
                 options={{ 
                   headerShown: true, 
                   title: "Journal",
-                  headerBackTitle: "Back"
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
                 }} 
               />
               <Stack.Screen 
@@ -70,7 +114,8 @@ export default function RootLayout() {
                   presentation: "modal", 
                   headerShown: true, 
                   title: "Add Journal Entry",
-                  headerBackTitle: "Cancel"
+                  headerBackTitle: "Cancel",
+                  headerRight: () => <HeaderRightButtons />
                 }} 
               />
               <Stack.Screen 
@@ -78,7 +123,8 @@ export default function RootLayout() {
                 options={{ 
                   headerShown: true, 
                   title: "Journal Entry",
-                  headerBackTitle: "Back"
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
                 }} 
               />
               <Stack.Screen 
@@ -86,7 +132,8 @@ export default function RootLayout() {
                 options={{ 
                   headerShown: true, 
                   title: "Calendar",
-                  headerBackTitle: "Back"
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
                 }} 
               />
               <Stack.Screen 
@@ -94,7 +141,8 @@ export default function RootLayout() {
                 options={{ 
                   headerShown: true, 
                   title: "Resources",
-                  headerBackTitle: "Back"
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
                 }} 
               />
               <Stack.Screen name="+not-found" />
@@ -106,3 +154,15 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+    gap: 4,
+  },
+  headerButton: {
+    padding: 8,
+  },
+});

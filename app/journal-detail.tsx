@@ -1,6 +1,5 @@
 
 import { authenticatedGet, authenticatedDelete } from '@/utils/api';
-import { Stack } from 'expo-router';
 import { colors } from '@/styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -290,13 +289,6 @@ export default function JournalDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <Stack.Screen
-        options={{
-          title: 'Entry Details',
-          headerShown: true,
-        }}
-      />
-
       <ScrollView style={styles.scrollContent}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Date & Time</Text>

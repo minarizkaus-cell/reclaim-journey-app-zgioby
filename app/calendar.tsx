@@ -12,7 +12,6 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
-import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -342,239 +341,230 @@ export default function CalendarScreen() {
   const monthYearText = currentMonth.format('MMMM YYYY');
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Calendar',
-          headerBackTitle: 'Back',
-        }}
-      />
-      <SafeAreaView
-        style={[styles.container, { backgroundColor: themeColors.background }]}
-        edges={['bottom']}
-      >
-        {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={themeColors.primary} />
-          </View>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      edges={['bottom']}
+    >
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Month navigation */}
+        <View style={styles.monthHeader}>
+          <TouchableOpacity onPress={handlePrevMonth} style={styles.monthButton}>
+            <IconSymbol
+              ios_icon_name="chevron.left"
+              android_material_icon_name="arrow-back"
+              size={24}
+              color={themeColors.text}
+            />
+          </TouchableOpacity>
+          <Text style={[styles.monthText, { color: themeColors.text }]}>
+            {monthYearText}
+          </Text>
+          <TouchableOpacity onPress={handleNextMonth} style={styles.monthButton}>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="arrow-forward"
+              size={24}
+              color={themeColors.text}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Calendar grid */}
+        {renderCalendarGrid()}
+
+        {/* Events list */}
+        {renderEventsList()}
+
+        {/* Add event button */}
+        {selectedDate && (
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: themeColors.primary }]}
+            onPress={handleAddEvent}
+          >
+            <IconSymbol
+              ios_icon_name="plus"
+              android_material_icon_name="add"
+              size={24}
+              color="#FFFFFF"
+            />
+            <Text style={styles.addButtonText}>Add Event</Text>
+          </TouchableOpacity>
         )}
+      </ScrollView>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Month navigation */}
-          <View style={styles.monthHeader}>
-            <TouchableOpacity onPress={handlePrevMonth} style={styles.monthButton}>
-              <IconSymbol
-                ios_icon_name="chevron.left"
-                android_material_icon_name="arrow-back"
-                size={24}
-                color={themeColors.text}
+      {/* Add Event Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.card }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: themeColors.text }]}>
+                Add Event
+              </Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <IconSymbol
+                  ios_icon_name="xmark"
+                  android_material_icon_name="close"
+                  size={24}
+                  color={themeColors.text}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              <Text style={[styles.label, { color: themeColors.text }]}>
+                Title *
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: themeColors.background,
+                    color: themeColors.text,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Event title"
+                placeholderTextColor={themeColors.textSecondary}
               />
-            </TouchableOpacity>
-            <Text style={[styles.monthText, { color: themeColors.text }]}>
-              {monthYearText}
+
+              <Text style={[styles.label, { color: themeColors.text }]}>
+                Description
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  {
+                    backgroundColor: themeColors.background,
+                    color: themeColors.text,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Optional description"
+                placeholderTextColor={themeColors.textSecondary}
+                multiline
+                numberOfLines={3}
+              />
+
+              <Text style={[styles.label, { color: themeColors.text }]}>
+                Time
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: themeColors.background,
+                    color: themeColors.text,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+                value={time}
+                onChangeText={setTime}
+                placeholder="HH:MM"
+                placeholderTextColor={themeColors.textSecondary}
+              />
+
+              <Text style={[styles.label, { color: themeColors.text }]}>
+                Duration (minutes)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: themeColors.background,
+                    color: themeColors.text,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+                value={duration}
+                onChangeText={setDuration}
+                placeholder="60"
+                placeholderTextColor={themeColors.textSecondary}
+                keyboardType="numeric"
+              />
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: themeColors.background }]}
+                onPress={() => {
+                  setShowAddModal(false);
+                  resetForm();
+                }}
+              >
+                <Text style={[styles.modalButtonText, { color: themeColors.text }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: themeColors.primary }]}
+                onPress={handleSaveEvent}
+                disabled={!title.trim()}
+              >
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  Save
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.deleteModalContent, { backgroundColor: themeColors.card }]}>
+            <Text style={[styles.deleteModalTitle, { color: themeColors.text }]}>
+              Delete Event?
             </Text>
-            <TouchableOpacity onPress={handleNextMonth} style={styles.monthButton}>
-              <IconSymbol
-                ios_icon_name="chevron.right"
-                android_material_icon_name="arrow-forward"
-                size={24}
-                color={themeColors.text}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Calendar grid */}
-          {renderCalendarGrid()}
-
-          {/* Events list */}
-          {renderEventsList()}
-
-          {/* Add event button */}
-          {selectedDate && (
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: themeColors.primary }]}
-              onPress={handleAddEvent}
-            >
-              <IconSymbol
-                ios_icon_name="plus"
-                android_material_icon_name="add"
-                size={24}
-                color="#FFFFFF"
-              />
-              <Text style={styles.addButtonText}>Add Event</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
-
-        {/* Add Event Modal */}
-        <Modal
-          visible={showAddModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowAddModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: themeColors.card }]}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: themeColors.text }]}>
-                  Add Event
+            <Text style={[styles.deleteModalText, { color: themeColors.textSecondary }]}>
+              This action cannot be undone.
+            </Text>
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, { backgroundColor: themeColors.background }]}
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setEventToDelete(null);
+                }}
+              >
+                <Text style={[styles.deleteModalButtonText, { color: themeColors.text }]}>
+                  Cancel
                 </Text>
-                <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                  <IconSymbol
-                    ios_icon_name="xmark"
-                    android_material_icon_name="close"
-                    size={24}
-                    color={themeColors.text}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.modalScroll}>
-                <Text style={[styles.label, { color: themeColors.text }]}>
-                  Title *
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, { backgroundColor: themeColors.error }]}
+                onPress={handleDeleteEvent}
+              >
+                <Text style={[styles.deleteModalButtonText, { color: '#FFFFFF' }]}>
+                  Delete
                 </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: themeColors.background,
-                      color: themeColors.text,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder="Event title"
-                  placeholderTextColor={themeColors.textSecondary}
-                />
-
-                <Text style={[styles.label, { color: themeColors.text }]}>
-                  Description
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    styles.textArea,
-                    {
-                      backgroundColor: themeColors.background,
-                      color: themeColors.text,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="Optional description"
-                  placeholderTextColor={themeColors.textSecondary}
-                  multiline
-                  numberOfLines={3}
-                />
-
-                <Text style={[styles.label, { color: themeColors.text }]}>
-                  Time
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: themeColors.background,
-                      color: themeColors.text,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                  value={time}
-                  onChangeText={setTime}
-                  placeholder="HH:MM"
-                  placeholderTextColor={themeColors.textSecondary}
-                />
-
-                <Text style={[styles.label, { color: themeColors.text }]}>
-                  Duration (minutes)
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: themeColors.background,
-                      color: themeColors.text,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                  value={duration}
-                  onChangeText={setDuration}
-                  placeholder="60"
-                  placeholderTextColor={themeColors.textSecondary}
-                  keyboardType="numeric"
-                />
-              </ScrollView>
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: themeColors.background }]}
-                  onPress={() => {
-                    setShowAddModal(false);
-                    resetForm();
-                  }}
-                >
-                  <Text style={[styles.modalButtonText, { color: themeColors.text }]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: themeColors.primary }]}
-                  onPress={handleSaveEvent}
-                  disabled={!title.trim()}
-                >
-                  <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
-                    Save
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-
-        {/* Delete Confirmation Modal */}
-        <Modal
-          visible={showDeleteModal}
-          animationType="fade"
-          transparent={true}
-          onRequestClose={() => setShowDeleteModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.deleteModalContent, { backgroundColor: themeColors.card }]}>
-              <Text style={[styles.deleteModalTitle, { color: themeColors.text }]}>
-                Delete Event?
-              </Text>
-              <Text style={[styles.deleteModalText, { color: themeColors.textSecondary }]}>
-                This action cannot be undone.
-              </Text>
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalButton, { backgroundColor: themeColors.background }]}
-                  onPress={() => {
-                    setShowDeleteModal(false);
-                    setEventToDelete(null);
-                  }}
-                >
-                  <Text style={[styles.deleteModalButtonText, { color: themeColors.text }]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.deleteModalButton, { backgroundColor: themeColors.error }]}
-                  onPress={handleDeleteEvent}
-                >
-                  <Text style={[styles.deleteModalButtonText, { color: '#FFFFFF' }]}>
-                    Delete
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      </SafeAreaView>
-    </>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 

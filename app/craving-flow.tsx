@@ -1,5 +1,4 @@
 
-import { Stack } from 'expo-router';
 import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import React from 'react';
 import { colors } from '@/styles/commonStyles';
@@ -10,15 +9,7 @@ export default function CravingFlowScreen() {
   const isDark = colorScheme === 'dark';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <Stack.Screen
-        options={{
-          title: 'Craving Flow',
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerShadowVisible: false,
-        }}
-      />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
       <View style={styles.content}>
         <Text style={[styles.message, { color: colors.text }]}>
           Craving Flow Disabled
