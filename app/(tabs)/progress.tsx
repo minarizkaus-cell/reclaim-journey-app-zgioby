@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedGet } from '@/utils/api';
 import React, { useState, useEffect } from 'react';
-import { JournalStats } from '@/types/models';
+import { JournalStats, User } from '@/types/models';
 
 const styles = StyleSheet.create({
   container: {
@@ -33,6 +33,29 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+  },
+  streakCard: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  streakNumber: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 8,
+  },
+  streakLabel: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
+  },
+  streakSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 8,
   },
   card: {
     backgroundColor: colors.card,
@@ -144,25 +167,50 @@ function getInsightMessage(stats: JournalStats): string {
   }
 }
 
+function calculateStreak(sobrietyDate: string | undefined): number | null {
+  if (!sobrietyDate) {
+    return null;
+  }
+
+  const sobrietyDateObj = new Date(sobrietyDate);
+  const today = new Date();
+  
+  // Reset time to midnight for accurate day calculation
+  sobrietyDateObj.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  
+  const diffTime = today.getTime() - sobrietyDateObj.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
+}
+
 export default function ProgressScreen() {
   const [stats, setStats] = useState<JournalStats | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    loadStats();
+    loadData();
   }, []);
 
-  const loadStats = async () => {
+  const loadData = async () => {
     try {
-      console.log('Loading journal statistics...');
-      // TODO: Backend Integration - GET /api/journal/stats → { totalEntries, cravingCount, resistedCount, partialCount, usedCount, commonTriggers, commonTools, averageIntensity }
-      const data = await authenticatedGet<JournalStats>('/api/journal/stats');
-      console.log('Loaded stats:', data);
-      setStats(data);
+      console.log('[Progress] Loading journal statistics and profile...');
+      
+      // Load stats
+      const statsData = await authenticatedGet<JournalStats>('/api/journal/stats');
+      console.log('[Progress] Loaded stats:', statsData);
+      setStats(statsData);
+      
+      // Load profile for sobriety_date
+      const profileData = await authenticatedGet<User>('/api/user/profile');
+      console.log('[Progress] Loaded profile:', profileData);
+      setProfile(profileData);
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      console.error('[Progress] Failed to load data:', error);
     } finally {
       setLoading(false);
     }
@@ -181,23 +229,44 @@ export default function ProgressScreen() {
     );
   }
 
+  const currentStreak = calculateStreak(profile?.sobriety_date);
+  const streakDaysText = currentStreak === 1 ? 'Day' : 'Days';
+  const streakSubtitleText = 'Days of sobriety';
+
   if (!stats || stats.totalEntries === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Text style={styles.title}>Progress</Text>
         </View>
-        <View style={styles.emptyContainer}>
-          <IconSymbol
-            ios_icon_name="chart"
-            android_material_icon_name="show-chart"
-            size={64}
-            color={colors.textSecondary}
-          />
-          <Text style={styles.emptyText}>
-            No data yet.{'\n'}Start journaling to see your progress.
-          </Text>
-        </View>
+        <ScrollView style={styles.scrollContent}>
+          {/* Show streak even if no journal entries */}
+          {currentStreak !== null && (
+            <View style={styles.streakCard}>
+              <IconSymbol
+                ios_icon_name="flame"
+                android_material_icon_name="local-fire-department"
+                size={48}
+                color="#FFFFFF"
+              />
+              <Text style={styles.streakNumber}>{currentStreak}</Text>
+              <Text style={styles.streakLabel}>{streakDaysText}</Text>
+              <Text style={styles.streakSubtitle}>{streakSubtitleText}</Text>
+            </View>
+          )}
+          
+          <View style={styles.emptyContainer}>
+            <IconSymbol
+              ios_icon_name="chart"
+              android_material_icon_name="show-chart"
+              size={64}
+              color={colors.textSecondary}
+            />
+            <Text style={styles.emptyText}>
+              No data yet.{'\n'}Start journaling to see your progress.
+            </Text>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -217,6 +286,21 @@ export default function ProgressScreen() {
       </View>
 
       <ScrollView style={styles.scrollContent}>
+        {/* Current Streak Card - Only show if sobriety_date exists */}
+        {currentStreak !== null && (
+          <View style={styles.streakCard}>
+            <IconSymbol
+              ios_icon_name="flame"
+              android_material_icon_name="local-fire-department"
+              size={48}
+              color="#FFFFFF"
+            />
+            <Text style={styles.streakNumber}>{currentStreak}</Text>
+            <Text style={styles.streakLabel}>{streakDaysText}</Text>
+            <Text style={styles.streakSubtitle}>{streakSubtitleText}</Text>
+          </View>
+        )}
+
         <View style={styles.insightCard}>
           <Text style={styles.insightText}>{insightMessage}</Text>
         </View>
