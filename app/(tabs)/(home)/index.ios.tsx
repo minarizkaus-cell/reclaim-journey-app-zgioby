@@ -34,10 +34,10 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 16,
   },
-  logo: {
-    width: 120,
-    height: 40,
-    resizeMode: 'contain',
+  appTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: colors.dark.primary,
   },
   settingsButton: {
     padding: 8,
@@ -291,6 +291,7 @@ export default function HomeScreen() {
   const subtitleText = 'One day at a time';
   const cravingButtonText = "I'M HAVING A CRAVING";
   const cravingButtonSubtitle = 'Start a guided reset';
+  const appTitle = 'MyRecovery';
 
   return (
     <View style={styles.container}>
@@ -306,10 +307,7 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Image
-            source={require('@/assets/images/natively-dark.png')}
-            style={styles.logo}
-          />
+          <Text style={styles.appTitle}>{appTitle}</Text>
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() => {
