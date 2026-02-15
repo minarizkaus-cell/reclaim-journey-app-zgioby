@@ -3,6 +3,8 @@ import * as appSchema from './db/schema.js';
 import * as authSchema from './db/auth-schema.js';
 import { registerJournalRoutes } from './routes/journal.js';
 import { registerUserRoutes } from './routes/user.js';
+import { registerCravingSessionsRoutes } from './routes/craving-sessions.js';
+import { registerCopingToolsRoutes } from './routes/coping-tools.js';
 
 const schema = { ...appSchema, ...authSchema };
 
@@ -19,6 +21,8 @@ app.withAuth();
 // IMPORTANT: Always use registration functions to avoid circular dependency issues
 registerUserRoutes(app);
 registerJournalRoutes(app);
+registerCravingSessionsRoutes(app);
+registerCopingToolsRoutes(app);
 
 await app.run();
 app.logger.info('Application running');
