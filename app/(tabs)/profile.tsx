@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   useColorScheme,
   Modal,
+  ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
@@ -15,14 +17,74 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { authenticatedGet, authenticatedPut } from '@/utils/api';
+import { User } from '@/types/models';
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
-  const { user, signOut } = useAuth();
+  const { user: authUser, signOut } = useAuth();
   const router = useRouter();
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<User | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    display_name: '',
+    timezone: '',
+    sponsor_name: '',
+    sponsor_phone: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    timer_minutes: 15,
+    sobriety_date: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      console.log('[Profile] Loading user profile...');
+      const data = await authenticatedGet<User>('/api/user/profile');
+      console.log('[Profile] Profile loaded:', data);
+      setProfile(data);
+      setEditForm({
+        display_name: data.display_name || '',
+        timezone: data.timezone || '',
+        sponsor_name: data.sponsor_name || '',
+        sponsor_phone: data.sponsor_phone || '',
+        emergency_contact_name: data.emergency_contact_name || '',
+        emergency_contact_phone: data.emergency_contact_phone || '',
+        timer_minutes: data.timer_minutes || 15,
+        sobriety_date: data.sobriety_date || '',
+      });
+    } catch (error) {
+      console.error('[Profile] Failed to load profile:', error);
+      setErrorMessage('Failed to load profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      console.log('[Profile] Saving profile updates...', editForm);
+      const updated = await authenticatedPut<User>('/api/user/profile', editForm);
+      console.log('[Profile] Profile updated:', updated);
+      setProfile(updated);
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('[Profile] Failed to update profile:', error);
+      setErrorMessage('Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSignOut = async () => {
     console.log('[Profile] User confirmed sign out');
@@ -37,9 +99,24 @@ export default function ProfileScreen() {
     }
   };
 
-  const userName = user?.name || 'User';
-  const userEmail = user?.email || '';
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  const userName = profile?.display_name || authUser?.name || 'User';
+  const userEmail = profile?.email || authUser?.email || '';
   const userInitial = userName.charAt(0).toUpperCase();
+  const sobrietyDays = profile?.sobriety_date 
+    ? Math.floor((new Date().getTime() - new Date(profile.sobriety_date).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -59,6 +136,13 @@ export default function ProfileScreen() {
             </Text>
           </View>
 
+          {sobrietyDays !== null && (
+            <View style={[styles.sobrietyCard, { backgroundColor: themeColors.primary }]}>
+              <Text style={styles.sobrietyDays}>{sobrietyDays}</Text>
+              <Text style={styles.sobrietyLabel}>Days Sober</Text>
+            </View>
+          )}
+
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>
               ACCOUNT
@@ -66,7 +150,10 @@ export default function ProfileScreen() {
             
             <TouchableOpacity
               style={[styles.menuItem, { backgroundColor: themeColors.card }]}
-              onPress={() => console.log('Edit Profile tapped')}
+              onPress={() => {
+                console.log('[Profile] Edit Profile tapped');
+                setShowEditModal(true);
+              }}
             >
               <View style={styles.menuItemLeft}>
                 <IconSymbol
@@ -87,28 +174,25 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.menuItem, { backgroundColor: themeColors.card }]}
-              onPress={() => console.log('Privacy tapped')}
-            >
-              <View style={styles.menuItemLeft}>
-                <IconSymbol
-                  ios_icon_name="lock"
-                  android_material_icon_name="lock"
-                  size={24}
-                  color={themeColors.text}
-                />
-                <Text style={[styles.menuItemText, { color: themeColors.text }]}>
-                  Privacy
-                </Text>
+            {profile?.sponsor_name && (
+              <View style={[styles.infoCard, { backgroundColor: themeColors.card }]}>
+                <Text style={[styles.infoLabel, { color: themeColors.textSecondary }]}>Sponsor</Text>
+                <Text style={[styles.infoValue, { color: themeColors.text }]}>{profile.sponsor_name}</Text>
+                {profile.sponsor_phone && (
+                  <Text style={[styles.infoSubvalue, { color: themeColors.textSecondary }]}>{profile.sponsor_phone}</Text>
+                )}
               </View>
-              <IconSymbol
-                ios_icon_name="chevron.right"
-                android_material_icon_name="chevron-right"
-                size={20}
-                color={themeColors.textSecondary}
-              />
-            </TouchableOpacity>
+            )}
+
+            {profile?.emergency_contact_name && (
+              <View style={[styles.infoCard, { backgroundColor: themeColors.card }]}>
+                <Text style={[styles.infoLabel, { color: themeColors.textSecondary }]}>Emergency Contact</Text>
+                <Text style={[styles.infoValue, { color: themeColors.text }]}>{profile.emergency_contact_name}</Text>
+                {profile.emergency_contact_phone && (
+                  <Text style={[styles.infoSubvalue, { color: themeColors.textSecondary }]}>{profile.emergency_contact_phone}</Text>
+                )}
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -244,6 +328,134 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Edit Profile Modal */}
+        <Modal
+          visible={showEditModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowEditModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.editModalContent, { backgroundColor: themeColors.card }]}>
+              <View style={styles.editModalHeader}>
+                <Text style={[styles.modalTitle, { color: themeColors.text }]}>
+                  Edit Profile
+                </Text>
+                <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                  <IconSymbol
+                    ios_icon_name="xmark"
+                    android_material_icon_name="close"
+                    size={24}
+                    color={themeColors.text}
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.editModalScroll}>
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Display Name</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
+                  value={editForm.display_name}
+                  onChangeText={(text) => setEditForm({ ...editForm, display_name: text })}
+                  placeholder="Your name"
+                  placeholderTextColor={themeColors.textSecondary}
+                />
+
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Sobriety Date (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
+                  value={editForm.sobriety_date}
+                  onChangeText={(text) => setEditForm({ ...editForm, sobriety_date: text })}
+                  placeholder="2024-01-01"
+                  placeholderTextColor={themeColors.textSecondary}
+                />
+
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Sponsor Name</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
+                  value={editForm.sponsor_name}
+                  onChangeText={(text) => setEditForm({ ...editForm, sponsor_name: text })}
+                  placeholder="Sponsor's name"
+                  placeholderTextColor={themeColors.textSecondary}
+                />
+
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Sponsor Phone</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
+                  value={editForm.sponsor_phone}
+                  onChangeText={(text) => setEditForm({ ...editForm, sponsor_phone: text })}
+                  placeholder="+1 (555) 123-4567"
+                  placeholderTextColor={themeColors.textSecondary}
+                  keyboardType="phone-pad"
+                />
+
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Emergency Contact Name</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
+                  value={editForm.emergency_contact_name}
+                  onChangeText={(text) => setEditForm({ ...editForm, emergency_contact_name: text })}
+                  placeholder="Emergency contact name"
+                  placeholderTextColor={themeColors.textSecondary}
+                />
+
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Emergency Contact Phone</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
+                  value={editForm.emergency_contact_phone}
+                  onChangeText={(text) => setEditForm({ ...editForm, emergency_contact_phone: text })}
+                  placeholder="+1 (555) 123-4567"
+                  placeholderTextColor={themeColors.textSecondary}
+                  keyboardType="phone-pad"
+                />
+
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Timer Minutes (Default: 15)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
+                  value={String(editForm.timer_minutes)}
+                  onChangeText={(text) => setEditForm({ ...editForm, timer_minutes: parseInt(text) || 15 })}
+                  placeholder="15"
+                  placeholderTextColor={themeColors.textSecondary}
+                  keyboardType="number-pad"
+                />
+
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Timezone</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
+                  value={editForm.timezone}
+                  onChangeText={(text) => setEditForm({ ...editForm, timezone: text })}
+                  placeholder="America/New_York"
+                  placeholderTextColor={themeColors.textSecondary}
+                />
+              </ScrollView>
+
+              <View style={styles.editModalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: themeColors.highlight, flex: 1 }]}
+                  onPress={() => setShowEditModal(false)}
+                  disabled={saving}
+                >
+                  <Text style={[styles.modalButtonText, { color: themeColors.text }]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: themeColors.primary, flex: 1 }]}
+                  onPress={handleSaveProfile}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                      Save
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -258,6 +470,11 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     paddingHorizontal: 20,
@@ -293,6 +510,24 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 16,
   },
+  sobrietyCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  sobrietyDays: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  sobrietyLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 8,
+  },
   section: {
     paddingHorizontal: 20,
     marginBottom: 24,
@@ -319,6 +554,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 12,
+  },
+  infoCard: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  infoSubvalue: {
+    fontSize: 14,
+    marginTop: 4,
   },
   signOutButton: {
     flexDirection: 'row',
@@ -373,5 +626,37 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  editModalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    borderRadius: 16,
+    padding: 24,
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  editModalScroll: {
+    maxHeight: 400,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+  },
+  editModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
   },
 });

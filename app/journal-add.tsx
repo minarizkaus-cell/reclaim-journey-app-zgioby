@@ -1,5 +1,4 @@
 
-import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,243 +9,450 @@ import {
   useColorScheme,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import { colors } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
 import { authenticatedPost } from '@/utils/api';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconSymbol } from '@/components/IconSymbol';
 
-const moods = [
-  { value: 'great', label: 'Great', icon: 'sentiment-very-satisfied', color: '#81C784' },
-  { value: 'good', label: 'Good', icon: 'sentiment-satisfied', color: '#AED581' },
-  { value: 'okay', label: 'Okay', icon: 'sentiment-neutral', color: '#FFD54F' },
-  { value: 'struggling', label: 'Struggling', icon: 'sentiment-dissatisfied', color: '#FFB74D' },
-  { value: 'difficult', label: 'Difficult', icon: 'sentiment-very-dissatisfied', color: '#E57373' },
+const COMMON_TRIGGERS = [
+  'Stress',
+  'Anxiety',
+  'Social pressure',
+  'Boredom',
+  'Loneliness',
+  'Anger',
+  'Depression',
+  'Celebration',
+  'Fatigue',
+  'Other',
 ];
 
-const commonTriggers = [
-  'Stress', 'Anxiety', 'Social Pressure', 'Boredom', 'Loneliness',
-  'Anger', 'Sadness', 'Celebration', 'Fatigue', 'Physical Pain',
+const COMMON_TOOLS = [
+  'Deep breathing',
+  'Called sponsor',
+  'Meditation',
+  'Exercise',
+  'Journaling',
+  'Distraction',
+  'Support group',
+  'Prayer',
+  'Music',
+  'Other',
 ];
-
-export default function JournalAddScreen() {
-  const router = useRouter();
-  const colorScheme = useColorScheme();
-  const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const toggleTrigger = (trigger: string) => {
-    if (selectedTriggers.includes(trigger)) {
-      setSelectedTriggers(selectedTriggers.filter((t) => t !== trigger));
-    } else {
-      setSelectedTriggers([...selectedTriggers, trigger]);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!selectedMood) {
-      console.log('No mood selected');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      console.log('Creating journal entry:', { mood: selectedMood, triggers: selectedTriggers, notes });
-      await authenticatedPost('/api/journal', {
-        mood: selectedMood,
-        triggers: selectedTriggers,
-        notes: notes.trim() || undefined,
-      });
-      console.log('Journal entry created successfully');
-      router.back();
-    } catch (error) {
-      console.error('Failed to create journal entry:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const canSave = selectedMood !== null;
-
-  return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Add Journal Entry',
-          presentation: 'modal',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <Text style={{ color: themeColors.primary, fontSize: 16 }}>Cancel</Text>
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={handleSave} disabled={!canSave || loading}>
-              {loading ? (
-                <ActivityIndicator size="small" color={themeColors.primary} />
-              ) : (
-                <Text style={{ color: canSave ? themeColors.primary : themeColors.textSecondary, fontSize: 16, fontWeight: '600' }}>
-                  Save
-                </Text>
-              )}
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>How are you feeling?</Text>
-            <View style={styles.moodsContainer}>
-              {moods.map((mood) => {
-                const isSelected = selectedMood === mood.value;
-                return (
-                  <TouchableOpacity
-                    key={mood.value}
-                    style={[
-                      styles.moodButton,
-                      {
-                        backgroundColor: isSelected ? mood.color : themeColors.card,
-                        borderColor: isSelected ? mood.color : themeColors.border,
-                        borderWidth: 1,
-                      },
-                    ]}
-                    onPress={() => setSelectedMood(mood.value)}
-                  >
-                    <IconSymbol
-                      ios_icon_name="face.smiling"
-                      android_material_icon_name={mood.icon}
-                      size={32}
-                      color={isSelected ? '#FFFFFF' : themeColors.text}
-                    />
-                    <Text style={[styles.moodLabel, { color: isSelected ? '#FFFFFF' : themeColors.text }]}>
-                      {mood.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Any triggers?</Text>
-            <Text style={[styles.sectionSubtitle, { color: themeColors.textSecondary }]}>
-              Select all that apply
-            </Text>
-            <View style={styles.triggersContainer}>
-              {commonTriggers.map((trigger) => {
-                const isSelected = selectedTriggers.includes(trigger);
-                return (
-                  <TouchableOpacity
-                    key={trigger}
-                    style={[
-                      styles.triggerButton,
-                      {
-                        backgroundColor: isSelected ? `${themeColors.primary}30` : themeColors.card,
-                        borderColor: isSelected ? themeColors.primary : themeColors.border,
-                        borderWidth: 1,
-                      },
-                    ]}
-                    onPress={() => toggleTrigger(trigger)}
-                  >
-                    <Text style={[styles.triggerLabel, { color: isSelected ? themeColors.primary : themeColors.text }]}>
-                      {trigger}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Notes (optional)</Text>
-            <TextInput
-              style={[
-                styles.notesInput,
-                {
-                  backgroundColor: themeColors.card,
-                  borderColor: themeColors.border,
-                  color: themeColors.text,
-                },
-              ]}
-              placeholder="What's on your mind?"
-              placeholderTextColor={themeColors.textSecondary}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-              value={notes}
-              onChangeText={setNotes}
-            />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
+    padding: 20,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  moodsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  moodButton: {
-    width: '30%',
-    aspectRatio: 1,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  moodLabel: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '600',
-    marginTop: 8,
-    textAlign: 'center',
+    color: colors.text,
+    marginBottom: 12,
   },
-  triggersContainer: {
+  optionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  triggerButton: {
+  optionButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-  },
-  triggerLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  notesInput: {
-    borderRadius: 12,
     borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  optionButtonSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  optionText: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  optionTextSelected: {
+    color: '#FFFFFF',
+  },
+  outcomeButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  outcomeButtonSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
+  },
+  outcomeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: 8,
+  },
+  intensityContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  intensityButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+  },
+  intensityButtonSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  intensityText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  intensityTextSelected: {
+    color: '#FFFFFF',
+  },
+  textInput: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    minHeight: 120,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    margin: 20,
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
+
+export default function JournalAddScreen() {
+  const router = useRouter();
+  const [hadCraving, setHadCraving] = useState<boolean | null>(null);
+  const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
+  const [intensity, setIntensity] = useState<number | null>(null);
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [outcome, setOutcome] = useState<'resisted' | 'partial' | 'used' | null>(null);
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const colorScheme = useColorScheme();
+
+  const toggleTrigger = (trigger: string) => {
+    console.log('User toggled trigger:', trigger);
+    setSelectedTriggers((prev) =>
+      prev.includes(trigger) ? prev.filter((t) => t !== trigger) : [...prev, trigger]
+    );
+  };
+
+  const toggleTool = (tool: string) => {
+    console.log('User toggled tool:', tool);
+    setSelectedTools((prev) =>
+      prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool]
+    );
+  };
+
+  const handleSave = async () => {
+    if (hadCraving === null || outcome === null) {
+      console.log('Cannot save: missing required fields');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      console.log('Saving journal entry...', {
+        hadCraving,
+        triggers: selectedTriggers,
+        intensity,
+        toolsUsed: selectedTools,
+        outcome,
+        notes,
+      });
+
+      // TODO: Backend Integration - POST /api/journal with { had_craving, triggers, intensity?, tools_used, outcome, notes? } → created entry
+      await authenticatedPost('/api/journal', {
+        had_craving: hadCraving,
+        triggers: selectedTriggers,
+        intensity: intensity,
+        tools_used: selectedTools,
+        outcome: outcome,
+        notes: notes || undefined,
+      });
+
+      console.log('Journal entry saved successfully');
+      router.back();
+    } catch (error) {
+      console.error('Failed to save journal entry:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canSave = hadCraving !== null && outcome !== null;
+
+  return (
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <Stack.Screen
+        options={{
+          title: 'New Entry',
+          headerShown: true,
+          presentation: 'modal',
+        }}
+      />
+
+      <ScrollView style={styles.scrollContent}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Did you experience a craving?</Text>
+          <View style={styles.optionRow}>
+            <TouchableOpacity
+              style={[
+                styles.optionButton,
+                hadCraving === true && styles.optionButtonSelected,
+              ]}
+              onPress={() => {
+                console.log('User selected: Had craving');
+                setHadCraving(true);
+              }}
+            >
+              <Text
+                style={[
+                  styles.optionText,
+                  hadCraving === true && styles.optionTextSelected,
+                ]}
+              >
+                Yes
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.optionButton,
+                hadCraving === false && styles.optionButtonSelected,
+              ]}
+              onPress={() => {
+                console.log('User selected: No craving');
+                setHadCraving(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.optionText,
+                  hadCraving === false && styles.optionTextSelected,
+                ]}
+              >
+                No
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {hadCraving && (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>What triggered it?</Text>
+              <View style={styles.optionRow}>
+                {COMMON_TRIGGERS.map((trigger) => {
+                  const isSelected = selectedTriggers.includes(trigger);
+                  return (
+                    <TouchableOpacity
+                      key={trigger}
+                      style={[
+                        styles.optionButton,
+                        isSelected && styles.optionButtonSelected,
+                      ]}
+                      onPress={() => toggleTrigger(trigger)}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          isSelected && styles.optionTextSelected,
+                        ]}
+                      >
+                        {trigger}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Intensity (1-10)</Text>
+              <View style={styles.intensityContainer}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => {
+                  const isSelected = intensity === level;
+                  return (
+                    <TouchableOpacity
+                      key={level}
+                      style={[
+                        styles.intensityButton,
+                        isSelected && styles.intensityButtonSelected,
+                      ]}
+                      onPress={() => {
+                        console.log('User selected intensity:', level);
+                        setIntensity(level);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.intensityText,
+                          isSelected && styles.intensityTextSelected,
+                        ]}
+                      >
+                        {level}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Tools used</Text>
+              <View style={styles.optionRow}>
+                {COMMON_TOOLS.map((tool) => {
+                  const isSelected = selectedTools.includes(tool);
+                  return (
+                    <TouchableOpacity
+                      key={tool}
+                      style={[
+                        styles.optionButton,
+                        isSelected && styles.optionButtonSelected,
+                      ]}
+                      onPress={() => toggleTool(tool)}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          isSelected && styles.optionTextSelected,
+                        ]}
+                      >
+                        {tool}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Outcome</Text>
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity
+              style={[
+                styles.outcomeButton,
+                outcome === 'resisted' && styles.outcomeButtonSelected,
+              ]}
+              onPress={() => {
+                console.log('User selected outcome: resisted');
+                setOutcome('resisted');
+              }}
+            >
+              <IconSymbol
+                ios_icon_name="check-circle"
+                android_material_icon_name="check-circle"
+                size={32}
+                color={outcome === 'resisted' ? '#4CAF50' : colors.textSecondary}
+              />
+              <Text style={styles.outcomeText}>Resisted</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.outcomeButton,
+                outcome === 'partial' && styles.outcomeButtonSelected,
+              ]}
+              onPress={() => {
+                console.log('User selected outcome: partial');
+                setOutcome('partial');
+              }}
+            >
+              <IconSymbol
+                ios_icon_name="warning"
+                android_material_icon_name="warning"
+                size={32}
+                color={outcome === 'partial' ? '#FF9800' : colors.textSecondary}
+              />
+              <Text style={styles.outcomeText}>Partial</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.outcomeButton,
+                outcome === 'used' && styles.outcomeButtonSelected,
+              ]}
+              onPress={() => {
+                console.log('User selected outcome: used');
+                setOutcome('used');
+              }}
+            >
+              <IconSymbol
+                ios_icon_name="error"
+                android_material_icon_name="error"
+                size={32}
+                color={outcome === 'used' ? colors.primary : colors.textSecondary}
+              />
+              <Text style={styles.outcomeText}>Used</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notes (optional)</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Add any additional notes..."
+            placeholderTextColor={colors.textSecondary}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+          />
+        </View>
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.saveButton, (!canSave || saving) && styles.saveButtonDisabled]}
+        onPress={handleSave}
+        disabled={!canSave || saving}
+      >
+        {saving ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.saveButtonText}>Save Entry</Text>
+        )}
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+}

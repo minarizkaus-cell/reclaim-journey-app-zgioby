@@ -7,15 +7,17 @@ import {
   TouchableOpacity,
   ScrollView,
   useColorScheme,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { authenticatedPut } from '@/utils/api';
 
 const onboardingSteps = [
   {
-    title: 'Welcome to MyRecovery',
+    title: 'Welcome to Reclaim Journey',
     description: 'Your personal companion on your recovery journey. Track your progress, manage cravings, and build healthy habits.',
     icon: 'favorite',
   },
@@ -41,17 +43,34 @@ export default function OnboardingScreen() {
   const colorScheme = useColorScheme();
   const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
   const [currentStep, setCurrentStep] = useState(0);
+  const [completing, setCompleting] = useState(false);
+
+  const completeOnboarding = async () => {
+    setCompleting(true);
+    try {
+      console.log('[Onboarding] Marking user as onboarded...');
+      await authenticatedPut('/api/user/profile', { onboarded: true });
+      console.log('[Onboarding] User marked as onboarded');
+      router.replace('/(tabs)/(home)/');
+    } catch (error) {
+      console.error('[Onboarding] Failed to mark as onboarded:', error);
+      // Still navigate even if the API call fails
+      router.replace('/(tabs)/(home)/');
+    } finally {
+      setCompleting(false);
+    }
+  };
 
   const handleNext = () => {
     if (currentStep < onboardingSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      router.replace('/(tabs)/(home)/');
+      completeOnboarding();
     }
   };
 
   const handleSkip = () => {
-    router.replace('/(tabs)/(home)/');
+    completeOnboarding();
   };
 
   const step = onboardingSteps[currentStep];
@@ -106,8 +125,13 @@ export default function OnboardingScreen() {
         <TouchableOpacity
           style={[styles.button, { backgroundColor: themeColors.primary }]}
           onPress={handleNext}
+          disabled={completing}
         >
-          <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>{buttonText}</Text>
+          {completing ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>{buttonText}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
