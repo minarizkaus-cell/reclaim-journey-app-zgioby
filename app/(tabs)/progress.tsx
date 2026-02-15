@@ -154,8 +154,8 @@ const styles = StyleSheet.create({
   },
 });
 
-function getInsightMessage(stats: JournalStats): string {
-  if (stats.totalEntries === 0) {
+function getInsightMessage(stats: JournalStats | null): string {
+  if (!stats || stats.totalEntries === 0) {
     return 'Start journaling to track your progress and gain insights into your recovery journey.';
   }
 
@@ -172,136 +172,246 @@ function getInsightMessage(stats: JournalStats): string {
   }
 }
 
-function calculateStreak(sobrietyDate: string | undefined): number | null {
+function calculateStreak(sobrietyDate: string | null | undefined): number | null {
   if (!sobrietyDate) {
     return null;
   }
 
-  const sobrietyDateObj = new Date(sobrietyDate);
-  const today = new Date();
-  
-  // Reset time to midnight for accurate day calculation
-  sobrietyDateObj.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  
-  const diffTime = today.getTime() - sobrietyDateObj.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
-  return diffDays;
+  try {
+    const sobrietyDateObj = new Date(sobrietyDate);
+    
+    // Check if date is valid
+    if (isNaN(sobrietyDateObj.getTime())) {
+      console.warn('[Progress] Invalid sobriety date:', sobrietyDate);
+      return null;
+    }
+    
+    const today = new Date();
+    
+    // Reset time to midnight for accurate day calculation
+    sobrietyDateObj.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - sobrietyDateObj.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Return 0 if negative (future date)
+    return diffDays >= 0 ? diffDays : 0;
+  } catch (error) {
+    console.error('[Progress] Error calculating streak:', error);
+    return null;
+  }
 }
 
-function calculateAvgIntensityThisWeek(journalEntries: JournalEntry[]): number | null {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
-
-  const relevantEntries = journalEntries.filter(entry => {
-    const entryDate = new Date(entry.created_at);
-    return (
-      entry.had_craving &&
-      entry.intensity !== null &&
-      entry.intensity !== undefined &&
-      entryDate >= sevenDaysAgo
-    );
-  });
-
-  if (relevantEntries.length === 0) {
+function calculateAvgIntensityThisWeek(journalEntries: JournalEntry[] | null | undefined): number | null {
+  if (!journalEntries || !Array.isArray(journalEntries) || journalEntries.length === 0) {
     return null;
   }
 
-  const totalIntensity = relevantEntries.reduce((sum, entry) => sum + (entry.intensity || 0), 0);
-  const avgIntensity = totalIntensity / relevantEntries.length;
-  
-  console.log('[Progress] Calculated avg intensity (7d):', avgIntensity, 'from', relevantEntries.length, 'entries');
-  
-  return avgIntensity;
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const relevantEntries = journalEntries.filter(entry => {
+      if (!entry || !entry.created_at) return false;
+      
+      try {
+        const entryDate = new Date(entry.created_at);
+        if (isNaN(entryDate.getTime())) return false;
+        
+        return (
+          entry.had_craving === true &&
+          entry.intensity !== null &&
+          entry.intensity !== undefined &&
+          typeof entry.intensity === 'number' &&
+          entryDate >= sevenDaysAgo
+        );
+      } catch (error) {
+        console.warn('[Progress] Error parsing entry date:', entry.created_at, error);
+        return false;
+      }
+    });
+
+    if (relevantEntries.length === 0) {
+      return null;
+    }
+
+    const totalIntensity = relevantEntries.reduce((sum, entry) => {
+      const intensity = entry.intensity || 0;
+      return sum + intensity;
+    }, 0);
+    
+    const avgIntensity = totalIntensity / relevantEntries.length;
+    
+    console.log('[Progress] Calculated avg intensity (7d):', avgIntensity, 'from', relevantEntries.length, 'entries');
+    
+    return avgIntensity;
+  } catch (error) {
+    console.error('[Progress] Error calculating avg intensity:', error);
+    return null;
+  }
 }
 
-function calculateCravingsThisWeek(journalEntries: JournalEntry[]): number {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
+function calculateCravingsThisWeek(journalEntries: JournalEntry[] | null | undefined): number {
+  if (!journalEntries || !Array.isArray(journalEntries) || journalEntries.length === 0) {
+    return 0;
+  }
 
-  const cravingsCount = journalEntries.filter(entry => {
-    const entryDate = new Date(entry.created_at);
-    return entry.had_craving && entryDate >= sevenDaysAgo;
-  }).length;
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
 
-  console.log('[Progress] Calculated cravings this week:', cravingsCount);
-  
-  return cravingsCount;
+    const cravingsCount = journalEntries.filter(entry => {
+      if (!entry || !entry.created_at) return false;
+      
+      try {
+        const entryDate = new Date(entry.created_at);
+        if (isNaN(entryDate.getTime())) return false;
+        
+        return entry.had_craving === true && entryDate >= sevenDaysAgo;
+      } catch (error) {
+        console.warn('[Progress] Error parsing entry date:', entry.created_at, error);
+        return false;
+      }
+    }).length;
+
+    console.log('[Progress] Calculated cravings this week:', cravingsCount);
+    
+    return cravingsCount;
+  } catch (error) {
+    console.error('[Progress] Error calculating cravings this week:', error);
+    return 0;
+  }
 }
 
-function calculateDaysSinceLastUsed(journalEntries: JournalEntry[]): number | null {
-  // Find all entries where outcome = 'used'
-  const usedEntries = journalEntries.filter(entry => entry.outcome === 'used');
-  
-  if (usedEntries.length === 0) {
-    console.log('[Progress] No entries with outcome="used" found');
+function calculateDaysSinceLastUsed(journalEntries: JournalEntry[] | null | undefined): number | null {
+  if (!journalEntries || !Array.isArray(journalEntries) || journalEntries.length === 0) {
     return null;
   }
 
-  // Sort by created_at descending to get the most recent
-  const sortedUsedEntries = usedEntries.sort((a, b) => {
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  try {
+    // Find all entries where outcome = 'used'
+    const usedEntries = journalEntries.filter(entry => {
+      return entry && entry.outcome === 'used' && entry.created_at;
+    });
+    
+    if (usedEntries.length === 0) {
+      console.log('[Progress] No entries with outcome="used" found');
+      return null;
+    }
 
-  const mostRecentUsedEntry = sortedUsedEntries[0];
-  const usedDate = new Date(mostRecentUsedEntry.created_at);
-  const today = new Date();
-  
-  // Reset time to midnight for accurate day calculation
-  usedDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  
-  const diffTime = today.getTime() - usedDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
-  console.log('[Progress] Days since last used:', diffDays, 'from entry:', mostRecentUsedEntry.id);
-  
-  return diffDays;
+    // Sort by created_at descending to get the most recent
+    const sortedUsedEntries = usedEntries.sort((a, b) => {
+      try {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        
+        if (isNaN(dateA) || isNaN(dateB)) return 0;
+        
+        return dateB - dateA;
+      } catch (error) {
+        console.warn('[Progress] Error sorting used entries:', error);
+        return 0;
+      }
+    });
+
+    const mostRecentUsedEntry = sortedUsedEntries[0];
+    if (!mostRecentUsedEntry || !mostRecentUsedEntry.created_at) {
+      return null;
+    }
+    
+    const usedDate = new Date(mostRecentUsedEntry.created_at);
+    if (isNaN(usedDate.getTime())) {
+      console.warn('[Progress] Invalid date for most recent used entry:', mostRecentUsedEntry.created_at);
+      return null;
+    }
+    
+    const today = new Date();
+    
+    // Reset time to midnight for accurate day calculation
+    usedDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - usedDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    console.log('[Progress] Days since last used:', diffDays, 'from entry:', mostRecentUsedEntry.id);
+    
+    return diffDays >= 0 ? diffDays : 0;
+  } catch (error) {
+    console.error('[Progress] Error calculating days since last used:', error);
+    return null;
+  }
 }
 
-function calculateMostUsedTools(journalEntries: JournalEntry[]): Array<{ tool: string; count: number }> {
-  const toolCounts: { [key: string]: number } = {};
+function calculateMostUsedTools(journalEntries: JournalEntry[] | null | undefined): Array<{ tool: string; count: number }> {
+  if (!journalEntries || !Array.isArray(journalEntries) || journalEntries.length === 0) {
+    return [];
+  }
 
-  journalEntries.forEach(entry => {
-    if (entry.tools_used && Array.isArray(entry.tools_used)) {
-      entry.tools_used.forEach(tool => {
-        toolCounts[tool] = (toolCounts[tool] || 0) + 1;
-      });
-    }
-  });
+  try {
+    const toolCounts: { [key: string]: number } = {};
 
-  const sortedTools = Object.entries(toolCounts)
-    .sort(([, countA], [, countB]) => countB - countA)
-    .slice(0, 3)
-    .map(([tool, count]) => ({ tool, count }));
+    journalEntries.forEach(entry => {
+      if (!entry || !entry.tools_used) return;
+      
+      if (Array.isArray(entry.tools_used)) {
+        entry.tools_used.forEach(tool => {
+          if (tool && typeof tool === 'string') {
+            toolCounts[tool] = (toolCounts[tool] || 0) + 1;
+          }
+        });
+      }
+    });
 
-  console.log('[Progress] Most used tools:', sortedTools);
-  
-  return sortedTools;
+    const sortedTools = Object.entries(toolCounts)
+      .sort(([, countA], [, countB]) => countB - countA)
+      .slice(0, 3)
+      .map(([tool, count]) => ({ tool, count }));
+
+    console.log('[Progress] Most used tools:', sortedTools);
+    
+    return sortedTools;
+  } catch (error) {
+    console.error('[Progress] Error calculating most used tools:', error);
+    return [];
+  }
 }
 
-function calculateMostCommonTriggers(journalEntries: JournalEntry[]): Array<{ trigger: string; count: number }> {
-  const triggerCounts: { [key: string]: number } = {};
+function calculateMostCommonTriggers(journalEntries: JournalEntry[] | null | undefined): Array<{ trigger: string; count: number }> {
+  if (!journalEntries || !Array.isArray(journalEntries) || journalEntries.length === 0) {
+    return [];
+  }
 
-  journalEntries.forEach(entry => {
-    if (entry.triggers && Array.isArray(entry.triggers)) {
-      entry.triggers.forEach(trigger => {
-        triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
-      });
-    }
-  });
+  try {
+    const triggerCounts: { [key: string]: number } = {};
 
-  const sortedTriggers = Object.entries(triggerCounts)
-    .sort(([, countA], [, countB]) => countB - countA)
-    .slice(0, 3)
-    .map(([trigger, count]) => ({ trigger, count }));
+    journalEntries.forEach(entry => {
+      if (!entry || !entry.triggers) return;
+      
+      if (Array.isArray(entry.triggers)) {
+        entry.triggers.forEach(trigger => {
+          if (trigger && typeof trigger === 'string') {
+            triggerCounts[trigger] = (triggerCounts[trigger] || 0) + 1;
+          }
+        });
+      }
+    });
 
-  console.log('[Progress] Most common triggers:', sortedTriggers);
-  
-  return sortedTriggers;
+    const sortedTriggers = Object.entries(triggerCounts)
+      .sort(([, countA], [, countB]) => countB - countA)
+      .slice(0, 3)
+      .map(([trigger, count]) => ({ trigger, count }));
+
+    console.log('[Progress] Most common triggers:', sortedTriggers);
+    
+    return sortedTriggers;
+  } catch (error) {
+    console.error('[Progress] Error calculating most common triggers:', error);
+    return [];
+  }
 }
 
 export default function ProgressScreen() {
@@ -323,36 +433,57 @@ export default function ProgressScreen() {
       // Load stats
       const statsData = await authenticatedGet<JournalStats>('/api/journal/stats');
       console.log('[Progress] Loaded stats:', statsData);
-      setStats(statsData);
+      setStats(statsData || null);
       
       // Load journal entries for weekly calculations
       const entriesData = await authenticatedGet<JournalEntry[]>('/api/journal/entries');
-      console.log('[Progress] Loaded journal entries:', entriesData.length, 'entries');
-      setJournalEntries(entriesData);
+      console.log('[Progress] Loaded journal entries:', entriesData?.length || 0, 'entries');
+      setJournalEntries(Array.isArray(entriesData) ? entriesData : []);
       
       // Load profile for sobriety_date
       const profileData = await authenticatedGet<User>('/api/user/profile');
       console.log('[Progress] Loaded profile:', profileData);
-      setProfile(profileData);
+      setProfile(profileData || null);
     } catch (error) {
       console.error('[Progress] Failed to load data:', error);
+      // Set empty/null values on error to prevent undefined access
+      setStats(null);
+      setJournalEntries([]);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
   };
 
   const getMoodPercentage = (count: number, total: number) => {
-    if (total === 0) return 0;
+    if (!total || total === 0) return 0;
     return Math.round((count / total) * 100);
   };
 
-  // Memoized calculations
-  const currentStreak = useMemo(() => calculateStreak(profile?.sobriety_date), [profile?.sobriety_date]);
-  const cravingsThisWeek = useMemo(() => calculateCravingsThisWeek(journalEntries), [journalEntries]);
-  const avgIntensityThisWeek = useMemo(() => calculateAvgIntensityThisWeek(journalEntries), [journalEntries]);
-  const daysSinceLastUsed = useMemo(() => calculateDaysSinceLastUsed(journalEntries), [journalEntries]);
-  const mostUsedTools = useMemo(() => calculateMostUsedTools(journalEntries), [journalEntries]);
-  const mostCommonTriggers = useMemo(() => calculateMostCommonTriggers(journalEntries), [journalEntries]);
+  // Memoized calculations with safe guards
+  const currentStreak = useMemo(() => {
+    return calculateStreak(profile?.sobriety_date);
+  }, [profile?.sobriety_date]);
+  
+  const cravingsThisWeek = useMemo(() => {
+    return calculateCravingsThisWeek(journalEntries);
+  }, [journalEntries]);
+  
+  const avgIntensityThisWeek = useMemo(() => {
+    return calculateAvgIntensityThisWeek(journalEntries);
+  }, [journalEntries]);
+  
+  const daysSinceLastUsed = useMemo(() => {
+    return calculateDaysSinceLastUsed(journalEntries);
+  }, [journalEntries]);
+  
+  const mostUsedTools = useMemo(() => {
+    return calculateMostUsedTools(journalEntries);
+  }, [journalEntries]);
+  
+  const mostCommonTriggers = useMemo(() => {
+    return calculateMostCommonTriggers(journalEntries);
+  }, [journalEntries]);
 
   if (loading) {
     return (
@@ -408,10 +539,10 @@ export default function ProgressScreen() {
   }
 
   const insightMessage = getInsightMessage(stats);
-  const resistedPercentage = getMoodPercentage(stats.resistedCount, stats.totalEntries);
-  const partialPercentage = getMoodPercentage(stats.partialCount, stats.totalEntries);
-  const usedPercentage = getMoodPercentage(stats.usedCount, stats.totalEntries);
-  const averageIntensityDisplay = stats.averageIntensity > 0 
+  const resistedPercentage = getMoodPercentage(stats.resistedCount || 0, stats.totalEntries || 0);
+  const partialPercentage = getMoodPercentage(stats.partialCount || 0, stats.totalEntries || 0);
+  const usedPercentage = getMoodPercentage(stats.usedCount || 0, stats.totalEntries || 0);
+  const averageIntensityDisplay = stats.averageIntensity && stats.averageIntensity > 0 
     ? stats.averageIntensity.toFixed(1) 
     : 'N/A';
 
@@ -451,7 +582,7 @@ export default function ProgressScreen() {
                 size={32}
                 color={colors.primary}
               />
-              <Text style={styles.statValue}>{stats.totalEntries}</Text>
+              <Text style={styles.statValue}>{stats.totalEntries || 0}</Text>
               <Text style={styles.statLabel}>Total Entries</Text>
             </View>
             <View style={styles.statItem}>
@@ -461,7 +592,7 @@ export default function ProgressScreen() {
                 size={32}
                 color="#FF9800"
               />
-              <Text style={styles.statValue}>{stats.cravingCount}</Text>
+              <Text style={styles.statValue}>{stats.cravingCount || 0}</Text>
               <Text style={styles.statLabel}>Cravings</Text>
             </View>
             <View style={styles.statItem}>
@@ -586,7 +717,7 @@ export default function ProgressScreen() {
           </View>
         )}
 
-        {/* Most Common Triggers - NEW SECTION */}
+        {/* Most Common Triggers */}
         {mostCommonTriggers.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Most Common Triggers</Text>
