@@ -169,6 +169,7 @@ export default function AuthScreen() {
   const isLoginMode = mode === 'login';
   const buttonText = isLoginMode ? 'Login' : 'Register';
   const toggleText = isLoginMode ? "Don't have an account? Register" : 'Already have an account? Login';
+  const taglineText = 'Your recovery companion';
 
   return (
     <KeyboardAvoidingView
@@ -191,7 +192,7 @@ export default function AuthScreen() {
 
           {/* Tagline */}
           <Text style={[styles.tagline, { color: colors.dark.text }]}>
-            Your recovery companion
+            {taglineText}
           </Text>
 
           {/* Title */}

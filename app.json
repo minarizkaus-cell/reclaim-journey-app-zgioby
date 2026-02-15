@@ -1,7 +1,8 @@
+
 {
   "expo": {
-    "name": "Reclaim Journey",
-    "slug": "Reclaim Journey",
+    "name": "MyRecovery",
+    "slug": "myrecovery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-dgf.png",
@@ -14,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Natively",
+      "bundleIdentifier": "com.myrecovery.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -25,7 +26,7 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Natively"
+      "package": "com.myrecovery.app"
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
@@ -36,7 +37,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "Reclaim Journey",
+    "scheme": "myrecovery",
     "experiments": {
       "typedRoutes": true
     },
