@@ -333,8 +333,8 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   appTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '600',
   },
   settingsButton: {
     padding: 8,
@@ -344,16 +344,16 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   welcomeText: {
-    fontSize: 16,
+    fontSize: 15,
     marginBottom: 4,
   },
   displayName: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '600',
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
   },
   cravingButton: {
     marginHorizontal: 20,
@@ -364,12 +364,12 @@ const styles = StyleSheet.create({
   },
   cravingButtonText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '500',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   cravingButtonSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
   },
   tilesContainer: {
@@ -394,8 +394,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tileText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     textAlign: 'center',
   },
   loadingContainer: {

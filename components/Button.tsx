@@ -9,7 +9,7 @@ import {
   TextStyle,
   useColorScheme,
 } from 'react-native';
-import { colors } from '@/styles/commonStyles';
+import { colors, typography } from '@/styles/commonStyles';
 
 interface ButtonProps {
   onPress?: () => void;
@@ -110,7 +110,7 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   buttonText: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '600',
   },
 });

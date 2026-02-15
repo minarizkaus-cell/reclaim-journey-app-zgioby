@@ -212,8 +212,8 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '600',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -243,12 +243,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '500',
     marginBottom: 4,
   },
   profileEmail: {
-    fontSize: 14,
+    fontSize: 13,
   },
   section: {
     marginBottom: 32,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   settingText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     marginLeft: 16,
   },
   signOutButton: {
@@ -286,12 +286,12 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '500',
     marginBottom: 12,
   },
   modalMessage: {
-    fontSize: 16,
+    fontSize: 15,
     marginBottom: 24,
   },
   modalButtons: {

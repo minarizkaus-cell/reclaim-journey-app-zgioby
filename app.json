@@ -1,7 +1,8 @@
+
 {
   "expo": {
-    "name": "Reclaim Journey",
-    "slug": "Reclaim Journey",
+    "name": "MyRecovery",
+    "slug": "myrecovery",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-dgf.png",
@@ -10,7 +11,7 @@
     "splash": {
       "image": "./assets/images/app-icon-dgf.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#121417"
     },
     "ios": {
       "supportsTablet": true,
@@ -22,13 +23,13 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-icon-dgf.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#121417"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.myrecovery.app"
     },
     "web": {
-      "favicon": "./assets/images/final_quest_240x240.png",
+      "favicon": "./assets/images/app-icon-dgf.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -36,7 +37,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "Reclaim Journey",
+    "scheme": "myrecovery",
     "experiments": {
       "typedRoutes": true
     },

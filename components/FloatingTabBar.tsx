@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Href } from 'expo-router';
+import { colors, typography } from '@/styles/commonStyles';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -122,26 +123,26 @@ export default function FloatingTabBar({
     };
   });
 
-  // Dynamic styles based on theme
+  // Dynamic styles based on theme - using MyRecovery colors
   const dynamicStyles = {
     blurContainer: {
       ...styles.blurContainer,
       borderWidth: 1.2,
-      borderColor: 'rgba(255, 255, 255, 1)',
+      borderColor: colors.dark.border,
       ...Platform.select({
         ios: {
           backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.8)'
+            ? 'rgba(27, 31, 36, 0.8)'
             : 'rgba(255, 255, 255, 0.6)',
         },
         android: {
           backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.95)'
+            ? 'rgba(27, 31, 36, 0.95)'
             : 'rgba(255, 255, 255, 0.6)',
         },
         web: {
           backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.95)'
+            ? 'rgba(27, 31, 36, 0.95)'
             : 'rgba(255, 255, 255, 0.6)',
           backdropFilter: 'blur(10px)',
         },
@@ -153,8 +154,8 @@ export default function FloatingTabBar({
     indicator: {
       ...styles.indicator,
       backgroundColor: theme.dark
-        ? 'rgba(255, 255, 255, 0.08)'
-        : 'rgba(0, 0, 0, 0.04)',
+        ? 'rgba(77, 170, 140, 0.15)'
+        : 'rgba(77, 170, 140, 0.1)',
       width: `${tabWidthPercent}%` as `${number}%`,
     },
   };
@@ -195,13 +196,13 @@ export default function FloatingTabBar({
                         android_material_icon_name={tab.icon}
                         ios_icon_name={tab.icon}
                         size={24}
-                        color={isActive ? theme.colors.primary : (theme.dark ? '#98989D' : '#000000')}
+                        color={isActive ? colors.dark.primary : colors.dark.textSecondary}
                       />
                       <Text
                         style={[
                           styles.tabLabel,
-                          { color: theme.dark ? '#98989D' : '#8E8E93' },
-                          isActive && { color: theme.colors.primary, fontWeight: '600' },
+                          { color: colors.dark.textSecondary },
+                          isActive && { color: colors.dark.primary, fontWeight: '600' },
                         ]}
                       >
                         {tab.label}
@@ -264,6 +265,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   tabLabel: {
+    ...typography.small,
     fontSize: 9,
     fontWeight: '500',
     marginTop: 2,

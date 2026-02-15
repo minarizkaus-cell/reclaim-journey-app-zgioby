@@ -194,7 +194,7 @@ export default function ProgressScreen() {
   const bgColor = isDark ? colors.dark.background : colors.light.background;
   const textColor = isDark ? colors.dark.text : colors.light.text;
   const cardBg = isDark ? colors.dark.card : colors.light.card;
-  const accentColor = isDark ? colors.dark.accent : colors.light.accent;
+  const accentColor = isDark ? colors.dark.primary : colors.light.primary;
 
   if (loading) {
     return (
@@ -399,8 +399,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '600',
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -416,12 +416,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   metricValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '600',
     marginTop: 8,
   },
   metricLabel: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 4,
     textAlign: 'center',
   },
@@ -431,8 +431,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '500',
     marginBottom: 16,
   },
   chart: {
@@ -458,13 +458,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listItemText: {
-    fontSize: 16,
+    fontSize: 15,
     marginLeft: 12,
     flex: 1,
   },
   listItemCount: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
@@ -472,12 +472,12 @@ const styles = StyleSheet.create({
     paddingVertical: 64,
   },
   emptyStateText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '500',
     marginTop: 16,
   },
   emptyStateSubtext: {
-    fontSize: 16,
+    fontSize: 15,
     marginTop: 8,
     opacity: 0.7,
   },
