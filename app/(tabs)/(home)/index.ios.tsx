@@ -11,7 +11,6 @@ import {
   useColorScheme,
   ActivityIndicator,
   RefreshControl,
-  Image,
   Linking,
   Modal,
 } from 'react-native';
@@ -20,181 +19,6 @@ import { authenticatedGet } from '@/utils/api';
 import { colors } from '@/styles/commonStyles';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.dark.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  appTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.dark.primary,
-  },
-  settingsButton: {
-    padding: 8,
-  },
-  welcomeSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: colors.dark.textSecondary,
-    marginBottom: 4,
-  },
-  displayName: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.dark.text,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.dark.textSecondary,
-  },
-  cravingButton: {
-    backgroundColor: colors.dark.primary,
-    marginHorizontal: 20,
-    marginBottom: 24,
-    padding: 20,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  cravingButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  cravingButtonSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  tilesContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  tilesRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  tile: {
-    flex: 1,
-    backgroundColor: colors.dark.card,
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 6,
-    borderWidth: 1,
-    borderColor: colors.dark.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 120,
-  },
-  tileIcon: {
-    marginBottom: 12,
-  },
-  tileText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.dark.text,
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.dark.background,
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.dark.background,
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: colors.dark.error,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: colors.dark.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.dark.card,
-    borderRadius: 16,
-    padding: 24,
-    width: '80%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: colors.dark.border,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.dark.text,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: 16,
-    color: colors.dark.textSecondary,
-    marginBottom: 24,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginHorizontal: 6,
-  },
-  modalButtonCancel: {
-    backgroundColor: colors.dark.background,
-    borderWidth: 1,
-    borderColor: colors.dark.border,
-  },
-  modalButtonConfirm: {
-    backgroundColor: colors.dark.primary,
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.dark.text,
-  },
-  modalButtonTextConfirm: {
-    color: '#FFFFFF',
-  },
-});
 
 export default function HomeScreen() {
   const [profile, setProfile] = useState<User | null>(null);
@@ -206,6 +30,9 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const { user } = useAuth();
 
+  const isDark = colorScheme === 'dark';
+  const themeColors = isDark ? colors.dark : colors.light;
+
   useEffect(() => {
     console.log('[Home iOS] Component mounted, loading profile...');
     loadProfile();
@@ -216,7 +43,6 @@ export default function HomeScreen() {
       console.log('[Home iOS] Starting profile load...');
       setError(null);
       
-      // Add timeout to prevent infinite hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Profile request timeout after 10 seconds')), 10000);
       });
@@ -264,9 +90,9 @@ export default function HomeScreen() {
   if (loading) {
     console.log('[Home iOS] Rendering loading state');
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.dark.primary} />
-        <Text style={{ color: colors.dark.textSecondary, marginTop: 16 }}>
+      <View style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
+        <ActivityIndicator size="large" color={themeColors.primary} />
+        <Text style={{ color: themeColors.textSecondary, marginTop: 16, fontSize: 16 }}>
           Loading your profile...
         </Text>
       </View>
@@ -276,17 +102,20 @@ export default function HomeScreen() {
   if (error) {
     console.log('[Home iOS] Rendering error state:', error);
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
+      <View style={[styles.errorContainer, { backgroundColor: themeColors.background }]}>
+        <Text style={[styles.errorText, { color: themeColors.error }]}>{error}</Text>
+        <TouchableOpacity 
+          style={[styles.retryButton, { backgroundColor: themeColors.primary }]} 
+          onPress={loadProfile}
+        >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  console.log('[Home iOS] Rendering main content');
-  const displayName = profile?.display_name || user?.name || user?.email?.split('@')[0] || 'there';
+  console.log('[Home iOS] Rendering main content with profile:', profile);
+  const displayName = profile?.display_name || user?.email?.split('@')[0] || 'there';
   const welcomeBackText = 'Welcome back';
   const subtitleText = 'One day at a time';
   const cravingButtonText = "I'M HAVING A CRAVING";
@@ -294,20 +123,19 @@ export default function HomeScreen() {
   const appTitle = 'MyRecovery';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.dark.primary}
+            tintColor={themeColors.primary}
           />
         }
       >
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.appTitle}>{appTitle}</Text>
+          <Text style={[styles.appTitle, { color: themeColors.primary }]}>{appTitle}</Text>
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() => {
@@ -319,21 +147,19 @@ export default function HomeScreen() {
               ios_icon_name="gear"
               android_material_icon_name="settings"
               size={28}
-              color={colors.dark.text}
+              color={themeColors.text}
             />
           </TouchableOpacity>
         </View>
 
-        {/* Welcome Section */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>{welcomeBackText}</Text>
-          <Text style={styles.displayName}>{displayName}</Text>
-          <Text style={styles.subtitle}>{subtitleText}</Text>
+          <Text style={[styles.welcomeText, { color: themeColors.textSecondary }]}>{welcomeBackText}</Text>
+          <Text style={[styles.displayName, { color: themeColors.text }]}>{displayName}</Text>
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>{subtitleText}</Text>
         </View>
 
-        {/* Primary Craving Button */}
         <TouchableOpacity
-          style={styles.cravingButton}
+          style={[styles.cravingButton, { backgroundColor: themeColors.primary }]}
           onPress={() => {
             console.log('[Home iOS] User tapped craving button');
             router.push('/craving-flow');
@@ -343,12 +169,10 @@ export default function HomeScreen() {
           <Text style={styles.cravingButtonSubtitle}>{cravingButtonSubtitle}</Text>
         </TouchableOpacity>
 
-        {/* 2-Column Grid Tiles */}
         <View style={styles.tilesContainer}>
-          {/* Row 1: Journal, Calendar */}
           <View style={styles.tilesRow}>
             <TouchableOpacity
-              style={styles.tile}
+              style={[styles.tile, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
               onPress={() => {
                 console.log('[Home iOS] User tapped Journal tile');
                 router.push('/journal');
@@ -359,14 +183,14 @@ export default function HomeScreen() {
                   ios_icon_name="book"
                   android_material_icon_name="menu-book"
                   size={32}
-                  color={colors.dark.text}
+                  color={themeColors.text}
                 />
               </View>
-              <Text style={styles.tileText}>Journal</Text>
+              <Text style={[styles.tileText, { color: themeColors.text }]}>Journal</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.tile}
+              style={[styles.tile, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
               onPress={() => {
                 console.log('[Home iOS] User tapped Calendar tile');
                 router.push('/calendar');
@@ -377,17 +201,16 @@ export default function HomeScreen() {
                   ios_icon_name="calendar"
                   android_material_icon_name="calendar-today"
                   size={32}
-                  color={colors.dark.text}
+                  color={themeColors.text}
                 />
               </View>
-              <Text style={styles.tileText}>Calendar</Text>
+              <Text style={[styles.tileText, { color: themeColors.text }]}>Calendar</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Row 2: Progress, Coping Tools */}
           <View style={styles.tilesRow}>
             <TouchableOpacity
-              style={styles.tile}
+              style={[styles.tile, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
               onPress={() => {
                 console.log('[Home iOS] User tapped Progress tile');
                 router.push('/(tabs)/progress');
@@ -398,14 +221,14 @@ export default function HomeScreen() {
                   ios_icon_name="chart"
                   android_material_icon_name="show-chart"
                   size={32}
-                  color={colors.dark.text}
+                  color={themeColors.text}
                 />
               </View>
-              <Text style={styles.tileText}>Progress</Text>
+              <Text style={[styles.tileText, { color: themeColors.text }]}>Progress</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.tile}
+              style={[styles.tile, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
               onPress={() => {
                 console.log('[Home iOS] User tapped Coping Tools tile');
                 router.push('/(tabs)/coping-tools');
@@ -416,17 +239,16 @@ export default function HomeScreen() {
                   ios_icon_name="heart"
                   android_material_icon_name="favorite"
                   size={32}
-                  color={colors.dark.text}
+                  color={themeColors.text}
                 />
               </View>
-              <Text style={styles.tileText}>Coping Tools</Text>
+              <Text style={[styles.tileText, { color: themeColors.text }]}>Coping Tools</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Row 3: Resources, Call Emergency */}
           <View style={styles.tilesRow}>
             <TouchableOpacity
-              style={styles.tile}
+              style={[styles.tile, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
               onPress={() => {
                 console.log('[Home iOS] User tapped Resources tile');
                 router.push('/resources');
@@ -437,14 +259,14 @@ export default function HomeScreen() {
                   ios_icon_name="info"
                   android_material_icon_name="info"
                   size={32}
-                  color={colors.dark.text}
+                  color={themeColors.text}
                 />
               </View>
-              <Text style={styles.tileText}>Resources</Text>
+              <Text style={[styles.tileText, { color: themeColors.text }]}>Resources</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.tile}
+              style={[styles.tile, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
               onPress={handleCallEmergency}
             >
               <View style={styles.tileIcon}>
@@ -452,16 +274,15 @@ export default function HomeScreen() {
                   ios_icon_name="phone"
                   android_material_icon_name="phone"
                   size={32}
-                  color={colors.dark.primary}
+                  color={themeColors.primary}
                 />
               </View>
-              <Text style={styles.tileText}>Call Emergency</Text>
+              <Text style={[styles.tileText, { color: themeColors.text }]}>Call Emergency</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
 
-      {/* Modal for missing sponsor phone */}
       <Modal
         visible={showModal}
         transparent={true}
@@ -469,23 +290,23 @@ export default function HomeScreen() {
         onRequestClose={() => setShowModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>No Emergency Contact</Text>
-            <Text style={styles.modalMessage}>
-              You haven't set up a sponsor phone number yet. Would you like to add one in Settings?
+          <View style={[styles.modalContent, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+            <Text style={[styles.modalTitle, { color: themeColors.text }]}>No Emergency Contact</Text>
+            <Text style={[styles.modalMessage, { color: themeColors.textSecondary }]}>
+              You haven&apos;t set up a sponsor phone number yet. Would you like to add one in Settings?
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
+                style={[styles.modalButton, styles.modalButtonCancel, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
                 onPress={() => {
                   console.log('[Home iOS] User cancelled modal');
                   setShowModal(false);
                 }}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: themeColors.text }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
+                style={[styles.modalButton, styles.modalButtonConfirm, { backgroundColor: themeColors.primary }]}
                 onPress={handleModalGoToSettings}
               >
                 <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
@@ -499,3 +320,157 @@ export default function HomeScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+  },
+  appTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  settingsButton: {
+    padding: 8,
+  },
+  welcomeSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  welcomeText: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  displayName: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+  },
+  cravingButton: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  cravingButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  cravingButtonSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  tilesContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  tilesRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  tile: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
+  },
+  tileIcon: {
+    marginBottom: 12,
+  },
+  tileText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    maxWidth: 400,
+    borderWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginHorizontal: 6,
+  },
+  modalButtonCancel: {
+    borderWidth: 1,
+  },
+  modalButtonConfirm: {
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonTextConfirm: {
+    color: '#FFFFFF',
+  },
+});
