@@ -145,6 +145,23 @@ export default function RootLayout() {
                   headerRight: () => <HeaderRightButtons />
                 }} 
               />
+              <Stack.Screen 
+                name="profile-settings" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Edit Profile",
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
+                }} 
+              />
+              <Stack.Screen 
+                name="verify-email" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Verify Email",
+                  headerBackTitle: "Back",
+                }} 
+              />
               <Stack.Screen name="+not-found" />
             </Stack>
             <StatusBar style="light" />

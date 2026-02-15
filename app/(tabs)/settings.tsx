@@ -57,6 +57,29 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>ACCOUNT</Text>
+
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}
+            onPress={() => router.push('/profile-settings')}
+          >
+            <IconSymbol
+              ios_icon_name="person.fill"
+              android_material_icon_name="person"
+              size={24}
+              color={themeColors.text}
+            />
+            <Text style={[styles.settingText, { color: themeColors.text }]}>Edit Profile</Text>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="chevron-right"
+              size={20}
+              color={themeColors.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>GENERAL</Text>
 
           <TouchableOpacity

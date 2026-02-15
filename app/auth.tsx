@@ -19,6 +19,7 @@ import { colors } from '@/styles/commonStyles';
 import { authenticatedGet, apiPost } from '@/utils/api';
 import { User } from '@/types/models';
 import { IconSymbol } from '@/components/IconSymbol';
+import { authClient } from '@/lib/auth';
 
 type Mode = 'login' | 'register';
 
@@ -64,6 +65,12 @@ export default function AuthScreen() {
     return emailRegex.test(emailText);
   };
 
+  // Password validation: min 8 chars, only letters+numbers, 1 uppercase, 1 lowercase, 1 number
+  const isValidPassword = (passwordText: string): boolean => {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z0-9]{8,}$/;
+    return passwordRegex.test(passwordText);
+  };
+
   const validateEmailField = (text: string) => {
     setEmail(text);
     if (!text.trim()) {
@@ -79,7 +86,9 @@ export default function AuthScreen() {
     setPassword(text);
     if (!text.trim()) {
       setPasswordError('Password is required');
-    } else if (text.length < 6) {
+    } else if (mode === 'register' && !isValidPassword(text)) {
+      setPasswordError('Min 8 chars, 1 uppercase, 1 lowercase, 1 number, no spaces/special chars');
+    } else if (mode === 'login' && text.length < 6) {
       setPasswordError('Password must be at least 6 characters');
     } else {
       setPasswordError('');
@@ -123,8 +132,11 @@ export default function AuthScreen() {
     if (!password.trim()) {
       setPasswordError('Password is required');
       isValid = false;
-    } else if (password.length < 6) {
+    } else if (isLoginMode && password.length < 6) {
       setPasswordError('Password must be at least 6 characters');
+      isValid = false;
+    } else if (!isLoginMode && !isValidPassword(password)) {
+      setPasswordError('Min 8 chars, 1 uppercase, 1 lowercase, 1 number, no spaces/special chars');
       isValid = false;
     }
 
@@ -197,6 +209,8 @@ export default function AuthScreen() {
           errorMsg = 'Invalid email or password';
         } else if (error.message.includes('already exists') || error.message.includes('409')) {
           errorMsg = 'An account with this email already exists';
+        } else if (error.message.includes('password') && error.message.includes('requirements')) {
+          errorMsg = 'Password must be 8+ chars with 1 uppercase, 1 lowercase, 1 number, no special chars';
         } else if (error.message.includes('network') || error.message.includes('fetch')) {
           errorMsg = 'Network error. Please check your connection.';
         }
@@ -260,16 +274,18 @@ export default function AuthScreen() {
     setForgotPasswordSuccess('');
 
     try {
-      // TODO: Backend Integration - POST /api/auth/forgot-password with { email: string }
-      // For now, simulate the call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Better Auth handles password reset through its own flow
+      // We use the authClient to trigger the forgot password flow
+      await authClient.forgetPassword({
+        email: forgotPasswordEmail,
+        redirectTo: '/auth', // Redirect back to auth screen after reset
+      });
       
       console.log('[Auth] Password reset email sent');
       const successMsg = 'If an account with that email exists, a reset link has been sent.';
       setForgotPasswordSuccess(successMsg);
       setForgotPasswordError('');
       
-      // Clear form after 3 seconds
       setTimeout(() => {
         setShowForgotPasswordModal(false);
         setForgotPasswordEmail('');
@@ -318,6 +334,9 @@ export default function AuthScreen() {
   const isLoginMode = mode === 'login';
   const buttonText = isLoginMode ? 'Login' : 'Register';
   const toggleText = isLoginMode ? "Don't have an account? Register" : 'Already have an account? Login';
+  const isFormValid = isLoginMode 
+    ? email && password && !emailError && !passwordError
+    : email && password && confirmPassword && displayName && !emailError && !passwordError && !confirmPasswordError && !displayNameError;
 
   return (
     <KeyboardAvoidingView
@@ -483,10 +502,10 @@ export default function AuthScreen() {
             style={[
               styles.primaryButton, 
               { backgroundColor: colors.dark.primary },
-              loading && styles.buttonDisabled
+              (!isFormValid || loading) && styles.buttonDisabled
             ]}
             onPress={handleAuth}
-            disabled={loading}
+            disabled={!isFormValid || loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -538,7 +557,6 @@ export default function AuthScreen() {
         </View>
       </ScrollView>
 
-      {/* Forgot Password Modal */}
       <Modal
         visible={showForgotPasswordModal}
         transparent
@@ -824,7 +842,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   modalButtonPrimary: {
-    // backgroundColor set dynamically
   },
   modalButtonTextSecondary: {
     fontSize: 16,

@@ -9,19 +9,21 @@ export interface User {
   sponsor_phone?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
-  timer_minutes: number; // Default 15
-  sobriety_date?: string; // YYYY-MM-DD format
+  timer_minutes: number;
+  sobriety_date?: string;
   onboarded: boolean;
+  email_verified: boolean;
+  registration_timestamp?: string;
 }
 
 // JournalEntry data model
 export interface JournalEntry {
   id: string;
-  created_at: string; // ISO 8601 date string
+  created_at: string;
   had_craving: boolean;
-  triggers: string[]; // Array of strings
-  intensity?: number; // Nullable number
-  tools_used: string[]; // Array of strings
+  triggers: string[];
+  intensity?: number;
+  tools_used: string[];
   outcome: 'resisted' | 'partial' | 'used';
   notes?: string;
 }
@@ -41,9 +43,9 @@ export interface JournalStats {
 // CravingSession data model
 export interface CravingSession {
   id: string;
-  started_at: string; // ISO 8601 date string
-  completed_at?: string; // ISO 8601 date string, nullable
-  triggers: string[]; // Array of strings
+  started_at: string;
+  completed_at?: string;
+  triggers: string[];
   intensity: number;
   need_type: 'distract' | 'calm' | 'support' | 'escape' | 'reflect';
 }
@@ -53,7 +55,7 @@ export interface CopingTool {
   id: string;
   title: string;
   duration: string;
-  steps: string[]; // Array of strings
+  steps: string[];
   when_to_use: string;
   is_mandatory: boolean;
 }
@@ -62,19 +64,19 @@ export interface CopingTool {
 export interface CopingToolCompletion {
   id: string;
   tool_id: string;
-  completed_at: string; // ISO 8601 date string
-  session_id?: string; // Optional session ID
+  completed_at: string;
+  session_id?: string;
 }
 
 // CalendarEvent data model
 export interface CalendarEvent {
   id: string;
   title: string;
-  description?: string; // Optional string
-  date: string; // YYYY-MM-DD format
-  time: string; // HH:mm format
-  duration: number; // Duration in minutes
-  reminder: number; // Reminder time in minutes before event
+  description?: string;
+  date: string;
+  time: string;
+  duration: number;
+  reminder: number;
   reminder_enabled: boolean;
 }
 
@@ -82,7 +84,7 @@ export interface CalendarEvent {
 export interface CustomResource {
   id: string;
   title: string;
-  url?: string; // Optional string
-  notes?: string; // Optional string
-  created_at: string; // ISO 8601 date string
+  url?: string;
+  notes?: string;
+  created_at: string;
 }

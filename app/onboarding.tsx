@@ -32,15 +32,14 @@ export default function OnboardingScreen() {
   // Step 1: Important Notice
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  // Step 2: Emergency Contact
-  const [sponsorName, setSponsorName] = useState('');
-  const [sponsorPhone, setSponsorPhone] = useState('');
+  // Step 2: Emergency Contact (replaced sponsor fields)
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
 
   // Step 3: Personalize
   const [selectedTimerMinutes, setSelectedTimerMinutes] = useState(15);
-  const [sobrietyDate, setSobrietyDate] = useState('');
+  const [sobrietyDate, setSobrietyDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [tempDate, setTempDate] = useState(new Date());
 
   const handleNext = async () => {
     console.log('[Onboarding] User tapped Next/Continue button, current step:', currentStep);
@@ -74,8 +73,8 @@ export default function OnboardingScreen() {
   const completeOnboarding = async () => {
     setLoading(true);
     console.log('[Onboarding] Completing onboarding with data:', {
-      sponsor_name: sponsorName,
-      sponsor_phone: sponsorPhone,
+      emergency_contact_name: emergencyContactName,
+      emergency_contact_phone: emergencyContactPhone,
       timer_minutes: selectedTimerMinutes,
       sobriety_date: sobrietyDate,
     });
@@ -86,24 +85,27 @@ export default function OnboardingScreen() {
         timer_minutes: selectedTimerMinutes,
       };
 
-      if (sponsorName.trim()) {
-        profileUpdates.sponsor_name = sponsorName.trim();
+      if (emergencyContactName.trim()) {
+        profileUpdates.emergency_contact_name = emergencyContactName.trim();
       }
-      if (sponsorPhone.trim()) {
-        profileUpdates.sponsor_phone = sponsorPhone.trim();
+      if (emergencyContactPhone.trim()) {
+        profileUpdates.emergency_contact_phone = emergencyContactPhone.trim();
       }
       if (sobrietyDate) {
-        profileUpdates.sobriety_date = sobrietyDate;
+        const year = sobrietyDate.getFullYear();
+        const month = String(sobrietyDate.getMonth() + 1).padStart(2, '0');
+        const day = String(sobrietyDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        profileUpdates.sobriety_date = formattedDate;
+        console.log('[Onboarding] Formatted sobriety date:', formattedDate);
       }
 
       console.log('[Onboarding] Sending profile updates:', profileUpdates);
       await authenticatedPut('/api/user/profile', profileUpdates);
       console.log('[Onboarding] Profile updated successfully');
       
-      // Refresh user context
       await fetchUser();
       
-      // Navigate to home
       router.replace('/(tabs)/(home)/');
     } catch (err: any) {
       console.error('[Onboarding] Failed to complete onboarding:', err);
@@ -114,27 +116,36 @@ export default function OnboardingScreen() {
   };
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    console.log('[Onboarding] Date picker event:', event.type, selectedDate);
+    
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
+    }
+    
+    if (event.type === 'dismissed') {
+      if (Platform.OS === 'ios') {
+        setShowDatePicker(false);
+      }
+      return;
     }
     
     if (selectedDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
       
       if (selectedDate > today) {
         console.log('[Onboarding] Future date selected, rejecting');
         setError('Cannot select a future date for sobriety date.');
+        if (Platform.OS === 'ios') {
+          setShowDatePicker(false);
+        }
         return;
       }
       
-      setTempDate(selectedDate);
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const formattedDate = `${year}-${month}-${day}`;
-      setSobrietyDate(formattedDate);
-      console.log('[Onboarding] Sobriety date selected:', formattedDate);
+      setSobrietyDate(selectedDate);
+      console.log('[Onboarding] Sobriety date selected:', selectedDate);
+      setError('');
       
       if (Platform.OS === 'ios') {
         setShowDatePicker(false);
@@ -211,7 +222,7 @@ export default function OnboardingScreen() {
             
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>
-                Sponsor Name
+                Contact Name
               </Text>
               <TextInput
                 style={[
@@ -222,16 +233,16 @@ export default function OnboardingScreen() {
                     color: themeColors.text,
                   }
                 ]}
-                placeholder="Enter sponsor name"
+                placeholder="Enter contact name"
                 placeholderTextColor={themeColors.textSecondary}
-                value={sponsorName}
-                onChangeText={setSponsorName}
+                value={emergencyContactName}
+                onChangeText={setEmergencyContactName}
               />
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>
-                Sponsor Phone
+                Contact Phone
               </Text>
               <TextInput
                 style={[
@@ -244,8 +255,8 @@ export default function OnboardingScreen() {
                 ]}
                 placeholder="Enter phone number"
                 placeholderTextColor={themeColors.textSecondary}
-                value={sponsorPhone}
-                onChangeText={setSponsorPhone}
+                value={emergencyContactPhone}
+                onChangeText={setEmergencyContactPhone}
                 keyboardType="phone-pad"
               />
             </View>
@@ -257,8 +268,9 @@ export default function OnboardingScreen() {
         );
 
       case 2:
-        const timerMinutesText = `${selectedTimerMinutes} min`;
-        const sobrietyDateDisplay = sobrietyDate || 'Select date';
+        const sobrietyDateDisplay = sobrietyDate 
+          ? sobrietyDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+          : 'Select date';
         
         return (
           <View style={styles.stepContainer}>
@@ -344,7 +356,7 @@ export default function OnboardingScreen() {
               
               {showDatePicker && (
                 <DateTimePicker
-                  value={tempDate}
+                  value={sobrietyDate || new Date()}
                   mode="date"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={handleDateChange}
@@ -366,7 +378,6 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Dot Indicator */}
         <View style={styles.dotsContainer}>
           {[0, 1, 2].map((index) => {
             const isActive = index === currentStep;
@@ -384,10 +395,8 @@ export default function OnboardingScreen() {
           })}
         </View>
 
-        {/* Step Content */}
         {renderStep()}
 
-        {/* Error Message */}
         {error ? (
           <Text style={[styles.errorText, { color: themeColors.error }]}>
             {error}
@@ -395,7 +404,6 @@ export default function OnboardingScreen() {
         ) : null}
       </ScrollView>
 
-      {/* Footer with Back and Continue Buttons */}
       <View style={[styles.footer, { borderTopColor: themeColors.border }]}>
         {currentStep > 0 && (
           <TouchableOpacity
