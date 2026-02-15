@@ -48,12 +48,55 @@ export default function RootLayout() {
               <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="craving-flow" options={{ headerShown: false }} />
-              <Stack.Screen name="journal" options={{ headerShown: false }} />
-              <Stack.Screen name="journal-add" options={{ presentation: "modal", headerShown: true, title: "Add Journal Entry" }} />
-              <Stack.Screen name="journal-detail" options={{ headerShown: true, title: "Journal Entry" }} />
-              <Stack.Screen name="calendar" options={{ headerShown: true, title: "Calendar" }} />
-              <Stack.Screen name="resources" options={{ headerShown: true, title: "Resources" }} />
+              <Stack.Screen 
+                name="craving-flow" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Craving Support",
+                  headerBackTitle: "Back"
+                }} 
+              />
+              <Stack.Screen 
+                name="journal" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Journal",
+                  headerBackTitle: "Back"
+                }} 
+              />
+              <Stack.Screen 
+                name="journal-add" 
+                options={{ 
+                  presentation: "modal", 
+                  headerShown: true, 
+                  title: "Add Journal Entry",
+                  headerBackTitle: "Cancel"
+                }} 
+              />
+              <Stack.Screen 
+                name="journal-detail" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Journal Entry",
+                  headerBackTitle: "Back"
+                }} 
+              />
+              <Stack.Screen 
+                name="calendar" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Calendar",
+                  headerBackTitle: "Back"
+                }} 
+              />
+              <Stack.Screen 
+                name="resources" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Resources",
+                  headerBackTitle: "Back"
+                }} 
+              />
               <Stack.Screen name="+not-found" />
             </Stack>
             <StatusBar style="light" />

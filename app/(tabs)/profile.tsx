@@ -12,7 +12,7 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -106,7 +106,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleDateChange = (event: any, date?: Date) => {
+  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
@@ -125,6 +125,10 @@ export default function ProfileScreen() {
       setSelectedDate(date);
       const formattedDate = date.toISOString().split('T')[0];
       setEditForm({ ...editForm, sobriety_date: formattedDate });
+      
+      if (Platform.OS === 'ios') {
+        setShowDatePicker(false);
+      }
     }
   };
 

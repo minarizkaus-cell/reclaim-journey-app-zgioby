@@ -17,7 +17,7 @@ import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { authenticatedPut } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function OnboardingScreen() {
   const [sponsorPhone, setSponsorPhone] = useState('');
 
   // Step 3: Personalize
-  const [timerMinutes, setTimerMinutes] = useState(15);
+  const [selectedTimerMinutes, setSelectedTimerMinutes] = useState(15);
   const [sobrietyDate, setSobrietyDate] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
@@ -54,11 +54,20 @@ export default function OnboardingScreen() {
 
     // Move to next step or finish
     if (currentStep < 2) {
-      setCurrentStep(currentStep + 1);
-      console.log('[Onboarding] Moving to step:', currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      console.log('[Onboarding] Moving to step:', nextStep);
     } else {
       // Step 3: Finish onboarding
       await completeOnboarding();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      console.log('[Onboarding] Moving back to step:', prevStep);
     }
   };
 
@@ -67,14 +76,14 @@ export default function OnboardingScreen() {
     console.log('[Onboarding] Completing onboarding with data:', {
       sponsor_name: sponsorName,
       sponsor_phone: sponsorPhone,
-      timer_minutes: timerMinutes,
+      timer_minutes: selectedTimerMinutes,
       sobriety_date: sobrietyDate,
     });
 
     try {
       const profileUpdates: any = {
         onboarded: true,
-        timer_minutes: timerMinutes,
+        timer_minutes: selectedTimerMinutes,
       };
 
       if (sponsorName.trim()) {
@@ -104,12 +113,21 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
     
     if (selectedDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate > today) {
+        console.log('[Onboarding] Future date selected, rejecting');
+        setError('Cannot select a future date for sobriety date.');
+        return;
+      }
+      
       setTempDate(selectedDate);
       const year = selectedDate.getFullYear();
       const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -117,6 +135,10 @@ export default function OnboardingScreen() {
       const formattedDate = `${year}-${month}-${day}`;
       setSobrietyDate(formattedDate);
       console.log('[Onboarding] Sobriety date selected:', formattedDate);
+      
+      if (Platform.OS === 'ios') {
+        setShowDatePicker(false);
+      }
     }
   };
 
@@ -189,7 +211,7 @@ export default function OnboardingScreen() {
             
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>
-                Sponsor Name (Optional)
+                Sponsor Name
               </Text>
               <TextInput
                 style={[
@@ -209,7 +231,7 @@ export default function OnboardingScreen() {
 
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>
-                Sponsor Phone (Optional)
+                Sponsor Phone
               </Text>
               <TextInput
                 style={[
@@ -235,6 +257,9 @@ export default function OnboardingScreen() {
         );
 
       case 2:
+        const timerMinutesText = `${selectedTimerMinutes} min`;
+        const sobrietyDateDisplay = sobrietyDate || 'Select date';
+        
         return (
           <View style={styles.stepContainer}>
             <View style={styles.iconContainer}>
@@ -256,8 +281,8 @@ export default function OnboardingScreen() {
               </Text>
               <View style={styles.timerOptions}>
                 {[10, 15, 20].map((minutes) => {
-                  const isSelected = timerMinutes === minutes;
-                  const minutesText = `${minutes} min`;
+                  const isSelected = selectedTimerMinutes === minutes;
+                  const minutesLabel = `${minutes} min`;
                   return (
                     <TouchableOpacity
                       key={minutes}
@@ -267,7 +292,7 @@ export default function OnboardingScreen() {
                         isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary }
                       ]}
                       onPress={() => {
-                        setTimerMinutes(minutes);
+                        setSelectedTimerMinutes(minutes);
                         console.log('[Onboarding] Timer minutes selected:', minutes);
                       }}
                       activeOpacity={0.7}
@@ -276,7 +301,7 @@ export default function OnboardingScreen() {
                         styles.timerButtonText,
                         { color: isSelected ? '#FFFFFF' : themeColors.text }
                       ]}>
-                        {minutesText}
+                        {minutesLabel}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -289,53 +314,42 @@ export default function OnboardingScreen() {
                 Sobriety Date (Optional)
               </Text>
               
-              {Platform.OS === 'web' ? (
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: themeColors.card,
-                      borderColor: themeColors.border,
-                      color: themeColors.text,
-                    }
-                  ]}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={themeColors.textSecondary}
-                  value={sobrietyDate}
-                  onChangeText={setSobrietyDate}
-                  maxLength={10}
+              <TouchableOpacity
+                style={[
+                  styles.input,
+                  styles.dateButton,
+                  {
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  }
+                ]}
+                onPress={() => {
+                  console.log('[Onboarding] Date picker button tapped');
+                  setShowDatePicker(true);
+                }}
+              >
+                <IconSymbol
+                  ios_icon_name="calendar"
+                  android_material_icon_name="calendar-today"
+                  size={20}
+                  color={themeColors.text}
                 />
-              ) : (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.input,
-                      styles.dateButton,
-                      {
-                        backgroundColor: themeColors.card,
-                        borderColor: themeColors.border,
-                      }
-                    ]}
-                    onPress={() => setShowDatePicker(true)}
-                  >
-                    <Text style={[
-                      styles.dateButtonText,
-                      { color: sobrietyDate ? themeColors.text : themeColors.textSecondary }
-                    ]}>
-                      {sobrietyDate || 'Select date'}
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={tempDate}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={handleDateChange}
-                      maximumDate={new Date()}
-                    />
-                  )}
-                </>
+                <Text style={[
+                  styles.dateButtonText,
+                  { color: sobrietyDate ? themeColors.text : themeColors.textSecondary }
+                ]}>
+                  {sobrietyDateDisplay}
+                </Text>
+              </TouchableOpacity>
+              
+              {showDatePicker && (
+                <DateTimePicker
+                  value={tempDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                />
               )}
             </View>
           </View>
@@ -346,7 +360,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const continueButtonText = currentStep === 2 ? 'Finish' : 'Continue';
+  const continueButtonText = currentStep === 2 ? 'Get Started' : 'Continue';
   const isContinueDisabled = currentStep === 0 && !agreedToTerms;
 
   return (
@@ -381,13 +395,36 @@ export default function OnboardingScreen() {
         ) : null}
       </ScrollView>
 
-      {/* Footer with Continue Button */}
+      {/* Footer with Back and Continue Buttons */}
       <View style={[styles.footer, { borderTopColor: themeColors.border }]}>
+        {currentStep > 0 && (
+          <TouchableOpacity
+            style={[
+              styles.backButton,
+              { borderColor: themeColors.border }
+            ]}
+            onPress={handleBack}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            <IconSymbol
+              ios_icon_name="chevron.left"
+              android_material_icon_name="chevron-left"
+              size={20}
+              color={themeColors.text}
+            />
+            <Text style={[styles.backButtonText, { color: themeColors.text }]}>
+              Back
+            </Text>
+          </TouchableOpacity>
+        )}
+        
         <TouchableOpacity
           style={[
             styles.continueButton,
             { backgroundColor: themeColors.primary },
-            isContinueDisabled && styles.continueButtonDisabled
+            isContinueDisabled && styles.continueButtonDisabled,
+            currentStep === 0 && styles.continueButtonFull
           ]}
           onPress={handleNext}
           disabled={isContinueDisabled || loading}
@@ -486,10 +523,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   dateButton: {
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   dateButtonText: {
     fontSize: 16,
+    flex: 1,
   },
   helperText: {
     fontSize: 13,
@@ -519,15 +559,35 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   footer: {
+    flexDirection: 'row',
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderTopWidth: 1,
+    gap: 12,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 2,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   continueButton: {
+    flex: 1,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  continueButtonFull: {
+    flex: 1,
   },
   continueButtonDisabled: {
     opacity: 0.5,
