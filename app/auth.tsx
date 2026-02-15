@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,170 +10,328 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
-} from "react-native";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "expo-router";
+  Image,
+} from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
+import { colors } from '@/styles/commonStyles';
+import { authenticatedGet } from '@/utils/api';
+import { User } from '@/types/models';
 
-type Mode = "signin" | "signup";
+type Mode = 'login' | 'register';
 
 export default function AuthScreen() {
   const router = useRouter();
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, signInWithGitHub, loading: authLoading } =
-    useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, loading: authLoading } = useAuth();
 
-  const [mode, setMode] = useState<Mode>("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [mode, setMode] = useState<Mode>('login');
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
 
   if (authLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.dark.background }]}>
+        <ActivityIndicator size="large" color={colors.dark.primary} />
       </View>
     );
   }
 
-  const handleEmailAuth = async () => {
-    if (!email || !password) {
-      setErrorMessage("Please enter email and password");
+  const validateFields = (): boolean => {
+    const isLoginMode = mode === 'login';
+    
+    if (!email.trim()) {
+      setErrorMessage('Email is required');
+      return false;
+    }
+
+    if (!password.trim()) {
+      setErrorMessage('Password is required');
+      return false;
+    }
+
+    if (!isLoginMode) {
+      if (!displayName.trim()) {
+        setErrorMessage('Display name is required');
+        return false;
+      }
+
+      if (!confirmPassword.trim()) {
+        setErrorMessage('Please confirm your password');
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        setErrorMessage('Passwords do not match');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleAuth = async () => {
+    console.log('[Auth] Starting authentication, mode:', mode);
+    
+    if (!validateFields()) {
       return;
     }
 
     setLoading(true);
-    setErrorMessage("");
+    setErrorMessage('');
+
     try {
-      if (mode === "signin") {
+      const isLoginMode = mode === 'login';
+      
+      if (isLoginMode) {
+        console.log('[Auth] Signing in with email...');
         await signInWithEmail(email, password);
-        router.replace("/");
+        
+        // Check onboarding status after login
+        console.log('[Auth] Login successful, checking onboarding status...');
+        const profile = await authenticatedGet<User>('/api/user/profile');
+        console.log('[Auth] Profile loaded:', profile);
+        
+        const onboardedStatus = profile.onboarded;
+        
+        if (onboardedStatus) {
+          console.log('[Auth] User is onboarded, redirecting to home...');
+          router.replace('/(tabs)/(home)/');
+        } else {
+          console.log('[Auth] User not onboarded, redirecting to onboarding...');
+          router.replace('/onboarding');
+        }
       } else {
-        await signUpWithEmail(email, password, name);
-        router.replace("/");
+        console.log('[Auth] Signing up with email...');
+        await signUpWithEmail(email, password, displayName);
+        
+        console.log('[Auth] Registration successful, redirecting to onboarding...');
+        router.replace('/onboarding');
       }
     } catch (error: any) {
-      console.error("[Auth] Authentication error:", error);
-      setErrorMessage(error.message || "Authentication failed");
+      console.error('[Auth] Authentication error:', error);
+      const errorMsg = error.message || 'Authentication failed';
+      setErrorMessage(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialAuth = async (provider: "google" | "apple" | "github") => {
+  const handleSocialAuth = async (provider: 'google' | 'apple') => {
+    console.log('[Auth] Starting social auth with:', provider);
     setLoading(true);
-    setErrorMessage("");
+    setErrorMessage('');
+    
     try {
-      if (provider === "google") {
+      if (provider === 'google') {
         await signInWithGoogle();
-      } else if (provider === "apple") {
+      } else if (provider === 'apple') {
         await signInWithApple();
-      } else if (provider === "github") {
-        await signInWithGitHub();
       }
-      router.replace("/");
+      
+      // Check onboarding status after social auth
+      console.log('[Auth] Social auth successful, checking onboarding status...');
+      const profile = await authenticatedGet<User>('/api/user/profile');
+      console.log('[Auth] Profile loaded:', profile);
+      
+      const onboardedStatus = profile.onboarded;
+      
+      if (onboardedStatus) {
+        console.log('[Auth] User is onboarded, redirecting to home...');
+        router.replace('/(tabs)/(home)/');
+      } else {
+        console.log('[Auth] User not onboarded, redirecting to onboarding...');
+        router.replace('/onboarding');
+      }
     } catch (error: any) {
-      console.error("[Auth] Social auth error:", error);
-      setErrorMessage(error.message || "Authentication failed");
+      console.error('[Auth] Social auth error:', error);
+      const errorMsg = error.message || 'Authentication failed';
+      setErrorMessage(errorMsg);
     } finally {
       setLoading(false);
     }
   };
+
+  const toggleMode = () => {
+    const newMode = mode === 'login' ? 'register' : 'login';
+    console.log('[Auth] Toggling mode to:', newMode);
+    setMode(newMode);
+    setErrorMessage('');
+    setDisplayName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  const isLoginMode = mode === 'login';
+  const buttonText = isLoginMode ? 'Login' : 'Register';
+  const toggleText = isLoginMode ? "Don't have an account? Register" : 'Already have an account? Login';
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={[styles.container, { backgroundColor: colors.dark.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.content}>
-          <Text style={styles.title}>
-            {mode === "signin" ? "Sign In" : "Sign Up"}
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/app-icon-dgf.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Tagline */}
+          <Text style={[styles.tagline, { color: colors.dark.text }]}>
+            Your recovery companion
           </Text>
 
+          {/* Title */}
+          <Text style={[styles.title, { color: colors.dark.text }]}>
+            {buttonText}
+          </Text>
+
+          {/* Error Message */}
           {errorMessage ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           ) : null}
 
-          {mode === "signup" && (
+          {/* Display Name (Register only) */}
+          {!isLoginMode && (
             <TextInput
-              style={styles.input}
-              placeholder="Name (optional)"
-              value={name}
-              onChangeText={setName}
+              style={[styles.input, { 
+                backgroundColor: colors.dark.card, 
+                borderColor: colors.dark.border,
+                color: colors.dark.text 
+              }]}
+              placeholder="Display Name"
+              placeholderTextColor={colors.dark.textSecondary}
+              value={displayName}
+              onChangeText={setDisplayName}
               autoCapitalize="words"
+              editable={!loading}
             />
           )}
 
+          {/* Email */}
           <TextInput
-            style={styles.input}
+            style={[styles.input, { 
+              backgroundColor: colors.dark.card, 
+              borderColor: colors.dark.border,
+              color: colors.dark.text 
+            }]}
             placeholder="Email"
+            placeholderTextColor={colors.dark.textSecondary}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!loading}
           />
 
+          {/* Password */}
           <TextInput
-            style={styles.input}
+            style={[styles.input, { 
+              backgroundColor: colors.dark.card, 
+              borderColor: colors.dark.border,
+              color: colors.dark.text 
+            }]}
             placeholder="Password"
+            placeholderTextColor={colors.dark.textSecondary}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             autoCapitalize="none"
+            editable={!loading}
           />
 
+          {/* Confirm Password (Register only) */}
+          {!isLoginMode && (
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: colors.dark.card, 
+                borderColor: colors.dark.border,
+                color: colors.dark.text 
+              }]}
+              placeholder="Confirm Password"
+              placeholderTextColor={colors.dark.textSecondary}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!loading}
+            />
+          )}
+
+          {/* Submit Button */}
           <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleEmailAuth}
+            style={[
+              styles.primaryButton, 
+              { backgroundColor: colors.dark.primary },
+              loading && styles.buttonDisabled
+            ]}
+            onPress={handleAuth}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.primaryButtonText}>
-                {mode === "signin" ? "Sign In" : "Sign Up"}
-              </Text>
+              <Text style={styles.primaryButtonText}>{buttonText}</Text>
             )}
           </TouchableOpacity>
 
+          {/* Toggle Mode Button */}
           <TouchableOpacity
             style={styles.switchModeButton}
-            onPress={() => setMode(mode === "signin" ? "signup" : "signin")}
+            onPress={toggleMode}
+            disabled={loading}
           >
-            <Text style={styles.switchModeText}>
-              {mode === "signin"
-                ? "Don't have an account? Sign Up"
-                : "Already have an account? Sign In"}
+            <Text style={[styles.switchModeText, { color: colors.dark.primary }]}>
+              {toggleText}
             </Text>
           </TouchableOpacity>
 
+          {/* Divider */}
           <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
+            <View style={[styles.dividerLine, { backgroundColor: colors.dark.border }]} />
+            <Text style={[styles.dividerText, { color: colors.dark.textSecondary }]}>
+              or continue with
+            </Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.dark.border }]} />
           </View>
 
+          {/* Social Auth Buttons */}
           <TouchableOpacity
-            style={styles.socialButton}
-            onPress={() => handleSocialAuth("google")}
+            style={[styles.socialButton, { 
+              borderColor: colors.dark.border,
+              backgroundColor: colors.dark.card 
+            }]}
+            onPress={() => handleSocialAuth('google')}
             disabled={loading}
           >
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
+            <Text style={[styles.socialButtonText, { color: colors.dark.text }]}>
+              Continue with Google
+            </Text>
           </TouchableOpacity>
 
-          {Platform.OS === "ios" && (
+          {Platform.OS === 'ios' && (
             <TouchableOpacity
               style={[styles.socialButton, styles.appleButton]}
-              onPress={() => handleSocialAuth("apple")}
+              onPress={() => handleSocialAuth('apple')}
               disabled={loading}
             >
-              <Text style={[styles.socialButtonText, styles.appleButtonText]}>
-                Continue with Apple
-              </Text>
+              <Text style={styles.appleButtonText}>Continue with Apple</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -184,13 +343,11 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollContent: {
     flexGrow: 1,
@@ -198,95 +355,105 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 24,
-    justifyContent: "center",
+    justifyContent: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+  },
+  tagline: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 32,
+    opacity: 0.7,
   },
   title: {
     fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 32,
-    textAlign: "center",
-    color: "#000",
+    fontWeight: 'bold',
+    marginBottom: 24,
+    textAlign: 'center',
   },
   input: {
     height: 50,
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 16,
     marginBottom: 16,
     fontSize: 16,
-    backgroundColor: "#fff",
   },
   primaryButton: {
     height: 50,
-    backgroundColor: "#007AFF",
     borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 8,
   },
   primaryButtonText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   switchModeButton: {
     marginTop: 16,
-    alignItems: "center",
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   switchModeText: {
-    color: "#007AFF",
     fontSize: 14,
+    fontWeight: '500',
   },
   divider: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginVertical: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#ddd",
   },
   dividerText: {
     marginHorizontal: 12,
-    color: "#666",
     fontSize: 14,
   },
   socialButton: {
     height: 50,
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 12,
-    backgroundColor: "#fff",
   },
   socialButtonText: {
     fontSize: 16,
-    color: "#000",
-    fontWeight: "500",
+    fontWeight: '500',
   },
   appleButton: {
-    backgroundColor: "#000",
-    borderColor: "#000",
+    backgroundColor: '#000',
+    borderColor: '#000',
   },
   appleButtonText: {
-    color: "#fff",
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
   },
   errorContainer: {
-    backgroundColor: "#fee",
+    backgroundColor: 'rgba(229, 115, 115, 0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(229, 115, 115, 0.3)',
   },
   errorText: {
-    color: "#c00",
+    color: '#E57373',
     fontSize: 14,
-    textAlign: "center",
+    textAlign: 'center',
   },
 });
