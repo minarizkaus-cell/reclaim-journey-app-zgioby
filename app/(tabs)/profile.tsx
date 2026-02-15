@@ -10,7 +10,9 @@ import {
   Modal,
   ActivityIndicator,
   TextInput,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -41,6 +43,8 @@ export default function ProfileScreen() {
     sobriety_date: '',
   });
   const [saving, setSaving] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
     loadProfile();
@@ -62,6 +66,9 @@ export default function ProfileScreen() {
         timer_minutes: data.timer_minutes || 15,
         sobriety_date: data.sobriety_date || '',
       });
+      if (data.sobriety_date) {
+        setSelectedDate(new Date(data.sobriety_date));
+      }
     } catch (error) {
       console.error('[Profile] Failed to load profile:', error);
       setErrorMessage('Failed to load profile. Please try again.');
@@ -97,6 +104,38 @@ export default function ProfileScreen() {
       console.error('[Profile] Sign out error:', error);
       setErrorMessage('Failed to sign out. Please try again.');
     }
+  };
+
+  const handleDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (date > today) {
+        console.log('[Profile] Future date selected, rejecting');
+        setErrorMessage('Cannot select a future date for sobriety date.');
+        return;
+      }
+      
+      console.log('[Profile] Date selected:', date);
+      setSelectedDate(date);
+      const formattedDate = date.toISOString().split('T')[0];
+      setEditForm({ ...editForm, sobriety_date: formattedDate });
+    }
+  };
+
+  const formatDisplayDate = (dateString: string) => {
+    if (!dateString) return 'Not set';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   };
 
   if (loading) {
@@ -362,14 +401,35 @@ export default function ProfileScreen() {
                   placeholderTextColor={themeColors.textSecondary}
                 />
 
-                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Sobriety Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border }]}
-                  value={editForm.sobriety_date}
-                  onChangeText={(text) => setEditForm({ ...editForm, sobriety_date: text })}
-                  placeholder="2024-01-01"
-                  placeholderTextColor={themeColors.textSecondary}
-                />
+                <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Sobriety Date</Text>
+                <TouchableOpacity
+                  style={[styles.datePickerButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
+                  onPress={() => {
+                    console.log('[Profile] Date picker button tapped');
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <IconSymbol
+                    ios_icon_name="calendar"
+                    android_material_icon_name="calendar-today"
+                    size={20}
+                    color={themeColors.text}
+                  />
+                  <Text style={[styles.datePickerText, { color: themeColors.text }]}>
+                    {formatDisplayDate(editForm.sobriety_date)}
+                  </Text>
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                    textColor={themeColors.text}
+                  />
+                )}
 
                 <Text style={[styles.inputLabel, { color: themeColors.textSecondary }]}>Sponsor Name</Text>
                 <TextInput
@@ -653,6 +713,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  datePickerText: {
+    fontSize: 16,
+    flex: 1,
   },
   editModalButtons: {
     flexDirection: 'row',
