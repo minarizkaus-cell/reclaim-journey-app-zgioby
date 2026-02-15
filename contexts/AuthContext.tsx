@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { Platform } from "react-native";
 import * as Linking from "expo-linking";
 import { authClient, setBearerToken, clearAuthTokens } from "@/lib/auth";
@@ -71,20 +71,41 @@ function openOAuthPopup(provider: string): Promise<string> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const deepLinkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     console.log('[AuthContext] Initializing, fetching user...');
     fetchUser();
 
+    // Mark initial load as complete after 2 seconds
+    const initialLoadTimer = setTimeout(() => {
+      isInitialLoadRef.current = false;
+      console.log('[AuthContext] Initial load complete, deep link listener now active');
+    }, 2000);
+
     // Listen for deep links (e.g. from social auth redirects)
     const subscription = Linking.addEventListener("url", (event) => {
+      // Ignore deep links during initial load to prevent infinite loops
+      if (isInitialLoadRef.current) {
+        console.log("[AuthContext] Ignoring deep link during initial load");
+        return;
+      }
+
       console.log("[AuthContext] Deep link received, refreshing user session");
-      // Allow time for the client to process the token if needed
-      setTimeout(() => fetchUser(), 500);
+      
+      // Debounce: Clear any pending refresh and schedule a new one
+      if (deepLinkTimeoutRef.current) {
+        clearTimeout(deepLinkTimeoutRef.current);
+      }
+      
+      deepLinkTimeoutRef.current = setTimeout(() => {
+        fetchUser();
+        deepLinkTimeoutRef.current = null;
+      }, 1000);
     });
 
     // POLLING: Refresh session every 10 minutes to keep SecureStore token in sync
-    // Reduced from 5 minutes to 10 minutes to reduce load
     const intervalId = setInterval(() => {
       console.log("[AuthContext] Auto-refreshing user session to sync token...");
       fetchUser();
@@ -93,6 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.remove();
       clearInterval(intervalId);
+      clearTimeout(initialLoadTimer);
+      if (deepLinkTimeoutRef.current) {
+        clearTimeout(deepLinkTimeoutRef.current);
+      }
     };
   }, []);
 
