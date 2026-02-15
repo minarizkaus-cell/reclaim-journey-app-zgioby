@@ -184,4 +184,104 @@ export function registerCopingToolsRoutes(app: App) {
       throw error;
     }
   });
+
+  // GET /api/coping-tools/session/:sessionId/mandatory-status - Get mandatory tool completion status for a session
+  app.fastify.get('/api/coping-tools/session/:sessionId/mandatory-status', async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) => {
+    const session = await requireAuth(request, reply);
+    if (!session) return;
+
+    const params = request.params as { sessionId: string };
+    const { sessionId } = params;
+
+    app.logger.info(
+      { userId: session.user.id, sessionId },
+      'Fetching mandatory tool completion status'
+    );
+
+    try {
+      // Verify the session belongs to the user
+      const [cravingSession] = await app.db
+        .select()
+        .from(schema.cravingSessions)
+        .where(eq(schema.cravingSessions.id, sessionId));
+
+      if (!cravingSession) {
+        app.logger.warn(
+          { userId: session.user.id, sessionId },
+          'Craving session not found'
+        );
+        return reply.code(404).send({ error: 'Craving session not found' });
+      }
+
+      if (cravingSession.userId !== session.user.id) {
+        app.logger.warn(
+          { userId: session.user.id, sessionId, ownerId: cravingSession.userId },
+          'User attempted to view session they do not own'
+        );
+        return reply.code(403).send({ error: 'Unauthorized' });
+      }
+
+      // Get all mandatory tools
+      const mandatoryTools = await app.db
+        .select({
+          id: schema.copingTools.id,
+          title: schema.copingTools.title,
+          isMandatory: schema.copingTools.isMandatory,
+        })
+        .from(schema.copingTools)
+        .where(eq(schema.copingTools.isMandatory, true));
+
+      // Get completed tools for this session
+      const completedTools = await app.db
+        .select({
+          toolId: schema.copingToolCompletions.toolId,
+        })
+        .from(schema.copingToolCompletions)
+        .where(
+          and(
+            eq(schema.copingToolCompletions.userId, session.user.id),
+            eq(schema.copingToolCompletions.sessionId, sessionId)
+          )
+        );
+
+      const completedToolIds = new Set(completedTools.map((t) => t.toolId));
+
+      // Check if all mandatory tools have been completed
+      const mandatoryStatus = mandatoryTools.map((tool) => ({
+        toolId: tool.id,
+        title: tool.title,
+        completed: completedToolIds.has(tool.id),
+      }));
+
+      const allMandatoryCompleted = mandatoryStatus.every((tool) => tool.completed);
+
+      app.logger.info(
+        {
+          userId: session.user.id,
+          sessionId,
+          allCompleted: allMandatoryCompleted,
+          completedCount: completedToolIds.size,
+          mandatoryCount: mandatoryTools.length,
+        },
+        'Mandatory tool completion status retrieved'
+      );
+
+      return {
+        sessionId,
+        allMandatoryCompleted,
+        mandatoryTools: mandatoryStatus,
+        completedCount: completedToolIds.size,
+        totalMandatory: mandatoryTools.length,
+      };
+    } catch (error) {
+      app.logger.error(
+        { err: error, userId: session.user.id, sessionId },
+        'Failed to fetch mandatory tool completion status'
+      );
+      throw error;
+    }
+  });
 }

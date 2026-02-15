@@ -7,8 +7,18 @@ const schema = { ...appSchema, ...authSchema };
 
 export const app = await createApplication(schema);
 
+// Map of tool IDs to their mandatory status
+const MANDATORY_TOOL_IDS = [
+  'tool-deep-breathing',
+  'tool-box-breathing',
+  'tool-grounding',
+  'tool-delay-10',
+  'tool-change-location',
+];
+
 const DEFAULT_COPING_TOOLS = [
   {
+    id: 'tool-deep-breathing',
     title: "Deep Breathing",
     duration: "5 minutes",
     steps: [
@@ -19,9 +29,22 @@ const DEFAULT_COPING_TOOLS = [
       "Repeat 5-10 times",
     ],
     whenToUse: "When feeling anxious or overwhelmed",
-    isMandatory: true,
   },
   {
+    id: 'tool-box-breathing',
+    title: "Box Breathing",
+    duration: "5 minutes",
+    steps: [
+      "Breathe in for 4 counts",
+      "Hold for 4 counts",
+      "Breathe out for 4 counts",
+      "Hold for 4 counts",
+      "Repeat 5 times",
+    ],
+    whenToUse: "When feeling stressed or anxious",
+  },
+  {
+    id: 'tool-grounding',
     title: "Grounding Exercise",
     duration: "5 minutes",
     steps: [
@@ -32,9 +55,9 @@ const DEFAULT_COPING_TOOLS = [
       "Name 1 thing you can taste",
     ],
     whenToUse: "When feeling disconnected or panicked",
-    isMandatory: true,
   },
   {
+    id: 'tool-progressive-muscle',
     title: "Progressive Muscle Relaxation",
     duration: "10 minutes",
     steps: [
@@ -45,9 +68,9 @@ const DEFAULT_COPING_TOOLS = [
       "End with your face and head",
     ],
     whenToUse: "When experiencing physical tension",
-    isMandatory: false,
   },
   {
+    id: 'tool-affirmations',
     title: "Positive Affirmations",
     duration: "3 minutes",
     steps: [
@@ -58,9 +81,9 @@ const DEFAULT_COPING_TOOLS = [
       "I am proud of my progress",
     ],
     whenToUse: "When needing motivation",
-    isMandatory: false,
   },
   {
+    id: 'tool-distraction',
     title: "Distraction Techniques",
     duration: "15 minutes",
     steps: [
@@ -71,9 +94,9 @@ const DEFAULT_COPING_TOOLS = [
       "Watch a funny video or movie",
     ],
     whenToUse: "When experiencing strong cravings",
-    isMandatory: true,
   },
   {
+    id: 'tool-urge-surfing',
     title: "Urge Surfing",
     duration: "15 minutes",
     steps: [
@@ -84,7 +107,32 @@ const DEFAULT_COPING_TOOLS = [
       "Wait 15-20 minutes before making any decisions",
     ],
     whenToUse: "During intense cravings",
-    isMandatory: false,
+  },
+  {
+    id: 'tool-delay-10',
+    title: "10-Minute Delay",
+    duration: "10 minutes",
+    steps: [
+      "Set a timer for 10 minutes",
+      "Engage in a distracting activity",
+      "Wait for the timer to go off",
+      "Reassess how you're feeling",
+      "Decide if you still need the substance",
+    ],
+    whenToUse: "When experiencing cravings",
+  },
+  {
+    id: 'tool-change-location',
+    title: "Change Your Location",
+    duration: "5 minutes",
+    steps: [
+      "Identify your current location",
+      "Leave immediately to a different place",
+      "Go to a safe, supportive environment",
+      "Spend at least 5 minutes there",
+      "Reassess your craving intensity",
+    ],
+    whenToUse: "When triggered by your environment",
   },
 ];
 
@@ -93,6 +141,8 @@ async function seedCopingTools() {
 
   try {
     for (const tool of DEFAULT_COPING_TOOLS) {
+      const isMandatory = MANDATORY_TOOL_IDS.includes(tool.id);
+
       // Check if tool already exists
       const existing = await app.db
         .select()
@@ -100,7 +150,16 @@ async function seedCopingTools() {
         .where(eq(appSchema.copingTools.title, tool.title));
 
       if (existing.length > 0) {
-        app.logger.info({ title: tool.title }, 'Coping tool already exists, skipping');
+        // Update existing tool to ensure correct mandatory status
+        await app.db
+          .update(appSchema.copingTools)
+          .set({ isMandatory })
+          .where(eq(appSchema.copingTools.title, tool.title));
+
+        app.logger.info(
+          { title: tool.title, isMandatory },
+          'Coping tool already exists, updated mandatory status'
+        );
         continue;
       }
 
@@ -109,10 +168,10 @@ async function seedCopingTools() {
         duration: tool.duration,
         steps: tool.steps,
         whenToUse: tool.whenToUse,
-        isMandatory: tool.isMandatory,
+        isMandatory,
       });
 
-      app.logger.info({ title: tool.title }, 'Coping tool created');
+      app.logger.info({ title: tool.title, isMandatory }, 'Coping tool created');
     }
 
     app.logger.info('Coping tools seed completed successfully');
