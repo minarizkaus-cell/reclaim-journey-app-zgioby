@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/styles/commonStyles';
@@ -26,10 +26,11 @@ export default function IndexScreen() {
   const checkOnboardingStatus = async () => {
     try {
       console.log('[Index] Checking onboarding status...');
+      setError(null);
       
-      // Add timeout to prevent infinite hanging
+      // Reduced timeout for faster failure
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 10000);
+        setTimeout(() => reject(new Error('Request timeout after 5 seconds')), 5000);
       });
 
       const profilePromise = authenticatedGet<User>('/api/user/profile');
@@ -40,22 +41,49 @@ export default function IndexScreen() {
       setIsOnboarded(profile.onboarded || false);
     } catch (error) {
       console.error('[Index] Failed to check onboarding status:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to load profile';
+      setError(errorMsg);
       // If we can't check, assume they need onboarding
       setIsOnboarded(false);
-      setError('Failed to load profile. Redirecting to onboarding...');
     } finally {
       setCheckingOnboarding(false);
     }
   };
 
-  if (authLoading || checkingOnboarding) {
+  const handleRetry = () => {
+    console.log('[Index] User tapped retry');
+    setCheckingOnboarding(true);
+    setError(null);
+    checkOnboardingStatus();
+  };
+
+  if (authLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.dark.background }]}>
         <ActivityIndicator size="large" color={colors.dark.primary} />
+        <Text style={[styles.loadingText, { color: colors.dark.textSecondary }]}>
+          Loading...
+        </Text>
+      </View>
+    );
+  }
+
+  if (checkingOnboarding) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.dark.background }]}>
+        <ActivityIndicator size="large" color={colors.dark.primary} />
+        <Text style={[styles.loadingText, { color: colors.dark.textSecondary }]}>
+          Checking your profile...
+        </Text>
         {error && (
-          <Text style={[styles.errorText, { color: colors.dark.error }]}>
-            {error}
-          </Text>
+          <>
+            <Text style={[styles.errorText, { color: colors.dark.error }]}>
+              {error}
+            </Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
     );
@@ -82,9 +110,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    textAlign: 'center',
+  },
   errorText: {
     marginTop: 16,
     fontSize: 14,
     textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: colors.dark.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -169,6 +169,7 @@ export default function AuthScreen() {
   const isLoginMode = mode === 'login';
   const buttonText = isLoginMode ? 'Login' : 'Register';
   const toggleText = isLoginMode ? "Don't have an account? Register" : 'Already have an account? Login';
+  const appNameText = 'MyRecovery';
   const taglineText = 'Your recovery companion';
 
   return (
@@ -190,8 +191,13 @@ export default function AuthScreen() {
             />
           </View>
 
+          {/* App Name */}
+          <Text style={[styles.appName, { color: colors.dark.primary }]}>
+            {appNameText}
+          </Text>
+
           {/* Tagline */}
-          <Text style={[styles.tagline, { color: colors.dark.text }]}>
+          <Text style={[styles.tagline, { color: colors.dark.textSecondary }]}>
             {taglineText}
           </Text>
 
@@ -366,11 +372,16 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
   },
+  appName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
   tagline: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 32,
-    opacity: 0.7,
   },
   title: {
     fontSize: 32,

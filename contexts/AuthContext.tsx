@@ -133,9 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthContext] Fetching user session...');
       setLoading(true);
       
-      // Add timeout to prevent hanging
+      // Reduced timeout for faster response
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Session fetch timeout')), 8000);
+        setTimeout(() => reject(new Error('Session fetch timeout after 5 seconds')), 5000);
       });
 
       const sessionPromise = authClient.getSession();
@@ -156,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("[AuthContext] Failed to fetch user:", error);
       setUser(null);
+      await clearAuthTokens();
     } finally {
       console.log('[AuthContext] Fetch user complete, setting loading to false');
       setLoading(false);
