@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedGet } from '@/utils/api';
 import React, { useState, useEffect } from 'react';
-import { JournalStats, User } from '@/types/models';
+import { JournalStats, User, JournalEntry } from '@/types/models';
 
 const styles = StyleSheet.create({
   container: {
@@ -185,9 +185,52 @@ function calculateStreak(sobrietyDate: string | undefined): number | null {
   return diffDays;
 }
 
+function calculateAvgIntensityThisWeek(journalEntries: JournalEntry[]): number | null {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const relevantEntries = journalEntries.filter(entry => {
+    const entryDate = new Date(entry.created_at);
+    return (
+      entry.had_craving &&
+      entry.intensity !== null &&
+      entry.intensity !== undefined &&
+      entryDate >= sevenDaysAgo
+    );
+  });
+
+  if (relevantEntries.length === 0) {
+    return null;
+  }
+
+  const totalIntensity = relevantEntries.reduce((sum, entry) => sum + (entry.intensity || 0), 0);
+  const avgIntensity = totalIntensity / relevantEntries.length;
+  
+  console.log('[Progress] Calculated avg intensity (7d):', avgIntensity, 'from', relevantEntries.length, 'entries');
+  
+  return avgIntensity;
+}
+
+function calculateCravingsThisWeek(journalEntries: JournalEntry[]): number {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const cravingsCount = journalEntries.filter(entry => {
+    const entryDate = new Date(entry.created_at);
+    return entry.had_craving && entryDate >= sevenDaysAgo;
+  }).length;
+
+  console.log('[Progress] Calculated cravings this week:', cravingsCount);
+  
+  return cravingsCount;
+}
+
 export default function ProgressScreen() {
   const [stats, setStats] = useState<JournalStats | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const colorScheme = useColorScheme();
@@ -198,12 +241,17 @@ export default function ProgressScreen() {
 
   const loadData = async () => {
     try {
-      console.log('[Progress] Loading journal statistics and profile...');
+      console.log('[Progress] Loading journal statistics, entries, and profile...');
       
       // Load stats
       const statsData = await authenticatedGet<JournalStats>('/api/journal/stats');
       console.log('[Progress] Loaded stats:', statsData);
       setStats(statsData);
+      
+      // Load journal entries for weekly calculations
+      const entriesData = await authenticatedGet<JournalEntry[]>('/api/journal/entries');
+      console.log('[Progress] Loaded journal entries:', entriesData.length, 'entries');
+      setJournalEntries(entriesData);
       
       // Load profile for sobriety_date
       const profileData = await authenticatedGet<User>('/api/user/profile');
@@ -232,6 +280,9 @@ export default function ProgressScreen() {
   const currentStreak = calculateStreak(profile?.sobriety_date);
   const streakDaysText = currentStreak === 1 ? 'Day' : 'Days';
   const streakSubtitleText = 'Days of sobriety';
+  
+  const cravingsThisWeek = calculateCravingsThisWeek(journalEntries);
+  const avgIntensityThisWeek = calculateAvgIntensityThisWeek(journalEntries);
 
   if (!stats || stats.totalEntries === 0) {
     return (
@@ -278,6 +329,10 @@ export default function ProgressScreen() {
   const averageIntensityDisplay = stats.averageIntensity > 0 
     ? stats.averageIntensity.toFixed(1) 
     : 'N/A';
+  
+  const avgIntensityWeekDisplay = avgIntensityThisWeek !== null 
+    ? avgIntensityThisWeek.toFixed(1) 
+    : null;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -338,6 +393,35 @@ export default function ProgressScreen() {
               <Text style={styles.statValue}>{averageIntensityDisplay}</Text>
               <Text style={styles.statLabel}>Avg Intensity</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Weekly Stats Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>This Week</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <IconSymbol
+                ios_icon_name="warning"
+                android_material_icon_name="warning"
+                size={32}
+                color="#FF9800"
+              />
+              <Text style={styles.statValue}>{cravingsThisWeek}</Text>
+              <Text style={styles.statLabel}>Cravings This Week</Text>
+            </View>
+            {avgIntensityWeekDisplay !== null && (
+              <View style={styles.statItem}>
+                <IconSymbol
+                  ios_icon_name="chart"
+                  android_material_icon_name="show-chart"
+                  size={32}
+                  color="#2196F3"
+                />
+                <Text style={styles.statValue}>{avgIntensityWeekDisplay}</Text>
+                <Text style={styles.statLabel}>Avg Intensity (7d)</Text>
+              </View>
+            )}
           </View>
         </View>
 
