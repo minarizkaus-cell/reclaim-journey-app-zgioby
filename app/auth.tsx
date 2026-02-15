@@ -72,11 +72,7 @@ export default function AuthScreen() {
 
   const validateEmailField = (text: string) => {
     setEmail(text);
-    if (text && !isValidEmail(text)) {
-      setEmailError('Please enter a valid email address');
-    } else {
-      setEmailError('');
-    }
+    setEmailError('');
   };
 
   const validatePasswordField = (text: string) => {
@@ -154,9 +150,22 @@ export default function AuthScreen() {
   const handleAuth = async () => {
     console.log('[Auth] User tapped', mode === 'login' ? 'Login' : 'Register');
 
-    if (!validateFields()) {
-      console.log('[Auth] Validation failed');
-      return;
+    if (mode === 'login') {
+      if (!email || !isValidEmail(email)) {
+        setEmailError('Please enter a valid email address');
+        return;
+      }
+      if (!password) {
+        setPasswordError('Please enter your password');
+        return;
+      }
+      setEmailError('');
+      setPasswordError('');
+    } else {
+      if (!validateFields()) {
+        console.log('[Auth] Validation failed');
+        return;
+      }
     }
 
     setLoading(true);
@@ -171,7 +180,7 @@ export default function AuthScreen() {
 
         if (result.error) {
           console.error('[Auth] Login error:', result.error);
-          setPasswordError('Invalid email or password');
+          setPasswordError('Incorrect email or password');
           setLoading(false);
           return;
         }
@@ -212,7 +221,7 @@ export default function AuthScreen() {
     } catch (error) {
       console.error('[Auth] Auth error:', error);
       if (mode === 'login') {
-        setPasswordError('Invalid email or password');
+        setPasswordError('Incorrect email or password');
       } else {
         setEmailError('Registration failed. Please try again.');
       }
