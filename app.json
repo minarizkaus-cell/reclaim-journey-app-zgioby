@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MyRecovery",
-    "slug": "myrecovery",
+    "name": "Reclaim Journey",
+    "slug": "Reclaim Journey",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-dgf.png",
@@ -36,7 +36,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "myrecovery",
+    "scheme": "Reclaim Journey",
     "experiments": {
       "typedRoutes": true
     },

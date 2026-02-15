@@ -14,10 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { Button } from '@/components/Button';
 import { authenticatedGet, authenticatedPost } from '@/utils/api';
 import { CopingTool, CopingToolCompletion } from '@/types/models';
 
-// Hardcoded list of mandatory tool IDs
 const MANDATORY_TOOL_IDS = [
   'tool-deep-breathing',
   'tool-box-breathing',
@@ -74,7 +74,6 @@ export default function CopingToolsScreen() {
     loadData();
   }, [loadData]);
 
-  // Check if a tool is mandatory based on hardcoded IDs
   const isToolMandatory = (toolId: string) => {
     return MANDATORY_TOOL_IDS.includes(toolId);
   };
@@ -83,18 +82,15 @@ export default function CopingToolsScreen() {
     return completions.some(c => c.tool_id === toolId);
   };
 
-  // Get mandatory tools based on hardcoded IDs
   const getMandatoryTools = () => {
     return copingTools.filter(t => isToolMandatory(t.id));
   };
 
-  // Count completed mandatory tools
   const getCompletedMandatoryCount = () => {
     const mandatoryTools = getMandatoryTools();
     return mandatoryTools.filter(t => isToolCompleted(t.id)).length;
   };
 
-  // Check if all mandatory tools are completed
   const areAllMandatoryToolsCompleted = () => {
     const mandatoryTools = getMandatoryTools();
     return mandatoryTools.length > 0 && mandatoryTools.every(t => isToolCompleted(t.id));
@@ -112,10 +108,8 @@ export default function CopingToolsScreen() {
 
       console.log('[CopingTools] Tool completed:', response);
 
-      // Add to local completions
       setCompletions(prev => [...prev, response.completion]);
 
-      // Check if all mandatory tools are now completed
       const updatedCompletions = [...completions, response.completion];
       const mandatoryTools = getMandatoryTools();
       const allMandatoryCompleted = mandatoryTools.every(t => 
@@ -149,7 +143,7 @@ export default function CopingToolsScreen() {
         tools_used: completedToolTitles,
         outcome: 'resisted',
         notes: 'Completed coping session.',
-        triggers: [], // Empty triggers for auto-created entries
+        triggers: [],
       });
 
       console.log('[CopingTools] Auto journal entry created successfully');
@@ -285,53 +279,21 @@ export default function CopingToolsScreen() {
                   })}
 
                   {!isCompleted && (
-                    <TouchableOpacity
-                      style={[styles.completeButton, { backgroundColor: themeColors.primary }]}
+                    <Button
                       onPress={() => handleCompleteTool(tool.id)}
-                      disabled={isCompletingThis}
+                      loading={isCompletingThis}
+                      style={styles.completeButton}
                     >
-                      {isCompletingThis ? (
-                        <ActivityIndicator color="#FFFFFF" />
-                      ) : (
-                        <>
-                          <IconSymbol
-                            ios_icon_name="checkmark"
-                            android_material_icon_name="check"
-                            size={20}
-                            color="#FFFFFF"
-                          />
-                          <Text style={styles.completeButtonText}>Mark as Completed</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
+                      Mark as Completed
+                    </Button>
                   )}
                 </View>
               )}
             </View>
           );
         })}
-
-        <View style={[styles.emergencyCard, { backgroundColor: themeColors.card, borderColor: themeColors.primary, borderWidth: 2 }]}>
-          <IconSymbol
-            ios_icon_name="phone.fill"
-            android_material_icon_name="phone"
-            size={32}
-            color={themeColors.primary}
-          />
-          <Text style={[styles.emergencyTitle, { color: themeColors.text }]}>Need Immediate Help?</Text>
-          <Text style={[styles.emergencyText, { color: themeColors.textSecondary }]}>
-            If you're in crisis, please reach out to a professional or call a helpline.
-          </Text>
-          <TouchableOpacity
-            style={[styles.emergencyButton, { backgroundColor: themeColors.primary }]}
-            onPress={() => router.push('/resources')}
-          >
-            <Text style={styles.emergencyButtonText}>View Resources</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
 
-      {/* Success Modal */}
       <Modal
         visible={showSuccessModal}
         transparent
@@ -351,27 +313,27 @@ export default function CopingToolsScreen() {
               You completed all mandatory coping tools. A journal entry has been created automatically.
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: themeColors.primary }]}
+              <Button
                 onPress={() => {
                   setShowSuccessModal(false);
                   router.push('/journal');
                 }}
+                style={styles.modalButton}
               >
-                <Text style={styles.modalButtonText}>View Journal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButtonSecondary, { borderColor: themeColors.border }]}
+                View Journal
+              </Button>
+              <Button
                 onPress={() => setShowSuccessModal(false)}
+                variant="secondary"
+                style={styles.modalButton}
               >
-                <Text style={[styles.modalButtonTextSecondary, { color: themeColors.text }]}>OK</Text>
-              </TouchableOpacity>
+                OK
+              </Button>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Error Modal */}
       <Modal
         visible={showErrorModal}
         transparent
@@ -390,12 +352,12 @@ export default function CopingToolsScreen() {
             <Text style={[styles.modalMessage, { color: themeColors.textSecondary }]}>
               {errorMessage}
             </Text>
-            <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: themeColors.primary }]}
+            <Button
               onPress={() => setShowErrorModal(false)}
+              style={styles.modalButton}
             >
-              <Text style={styles.modalButtonText}>OK</Text>
-            </TouchableOpacity>
+              OK
+            </Button>
           </View>
         </View>
       </Modal>
@@ -524,45 +486,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   completeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: 16,
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  completeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emergencyCard: {
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  emergencyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emergencyText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  emergencyButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  emergencyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -595,25 +519,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   modalButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalButtonSecondary: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  modalButtonTextSecondary: {
-    fontSize: 16,
-    fontWeight: '600',
+    width: '100%',
   },
 });

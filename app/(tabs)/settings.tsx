@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { Button } from '@/components/Button';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function SettingsScreen() {
@@ -87,7 +88,7 @@ export default function SettingsScreen() {
               size={24}
               color={themeColors.text}
             />
-            <Text style={[styles.settingText, { color: themeColors.text }]}>Resources</Text>
+            <Text style={[styles.settingText, { color: themeColors.text }]}>Resources & Crisis Help</Text>
             <IconSymbol
               ios_icon_name="chevron.right"
               android_material_icon_name="chevron-right"
@@ -158,18 +159,13 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={[styles.signOutButton, { backgroundColor: themeColors.card, borderColor: themeColors.primary, borderWidth: 1 }]}
+        <Button
           onPress={() => setShowSignOutModal(true)}
+          variant="outline"
+          style={styles.signOutButton}
         >
-          <IconSymbol
-            ios_icon_name="arrow.right.square.fill"
-            android_material_icon_name="logout"
-            size={24}
-            color={themeColors.primary}
-          />
-          <Text style={[styles.signOutText, { color: themeColors.primary }]}>Sign Out</Text>
-        </TouchableOpacity>
+          Sign Out
+        </Button>
       </ScrollView>
 
       <Modal
@@ -185,18 +181,19 @@ export default function SettingsScreen() {
               Are you sure you want to sign out?
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: themeColors.border }]}
+              <Button
                 onPress={() => setShowSignOutModal(false)}
+                variant="secondary"
+                style={styles.modalButton}
               >
-                <Text style={[styles.modalButtonText, { color: themeColors.text }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: themeColors.primary }]}
+                Cancel
+              </Button>
+              <Button
                 onPress={handleSignOut}
+                style={styles.modalButton}
               >
-                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>Sign Out</Text>
-              </TouchableOpacity>
+                Sign Out
+              </Button>
             </View>
           </View>
         </View>
@@ -275,17 +272,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
     marginTop: 20,
-  },
-  signOutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 12,
   },
   modalOverlay: {
     flex: 1,
@@ -313,12 +300,5 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

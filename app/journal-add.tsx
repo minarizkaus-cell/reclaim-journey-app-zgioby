@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   useColorScheme,
-  ActivityIndicator,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { colors } from '@/styles/commonStyles';
+import { Button } from '@/components/Button';
 import { authenticatedPost } from '@/utils/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -43,123 +43,11 @@ const COMMON_TOOLS = [
   'Other',
 ];
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  optionButtonSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  optionText: {
-    fontSize: 14,
-    color: colors.text,
-  },
-  optionTextSelected: {
-    color: '#FFFFFF',
-  },
-  outcomeButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  outcomeButtonSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.card,
-  },
-  outcomeText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: 8,
-  },
-  intensityContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  intensityButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
-  },
-  intensityButtonSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  intensityText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  intensityTextSelected: {
-    color: '#FFFFFF',
-  },
-  textInput: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    margin: 20,
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
-
 export default function JournalAddScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
+  
   const [hadCraving, setHadCraving] = useState<boolean | null>(null);
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [intensity, setIntensity] = useState<number | null>(null);
@@ -167,7 +55,6 @@ export default function JournalAddScreen() {
   const [outcome, setOutcome] = useState<'resisted' | 'partial' | 'used' | null>(null);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
-  const colorScheme = useColorScheme();
 
   const toggleTrigger = (trigger: string) => {
     console.log('User toggled trigger:', trigger);
@@ -200,7 +87,6 @@ export default function JournalAddScreen() {
         notes,
       });
 
-      // TODO: Backend Integration - POST /api/journal with { had_craving, triggers, intensity?, tools_used, outcome, notes? } → created entry
       await authenticatedPost('/api/journal', {
         had_craving: hadCraving,
         triggers: selectedTriggers,
@@ -210,7 +96,7 @@ export default function JournalAddScreen() {
         notes: notes || undefined,
       });
 
-      console.log('Journal entry saved successfully');
+      console.log('Journal entry saved successfully, navigating back');
       router.back();
     } catch (error) {
       console.error('Failed to save journal entry:', error);
@@ -222,7 +108,7 @@ export default function JournalAddScreen() {
   const canSave = hadCraving !== null && outcome !== null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
       <Stack.Screen
         options={{
           title: 'New Entry',
@@ -233,12 +119,13 @@ export default function JournalAddScreen() {
 
       <ScrollView style={styles.scrollContent}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Did you experience a craving?</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Did you experience a craving?</Text>
           <View style={styles.optionRow}>
             <TouchableOpacity
               style={[
                 styles.optionButton,
-                hadCraving === true && styles.optionButtonSelected,
+                { backgroundColor: themeColors.card, borderColor: themeColors.border },
+                hadCraving === true && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
               ]}
               onPress={() => {
                 console.log('User selected: Had craving');
@@ -248,7 +135,8 @@ export default function JournalAddScreen() {
               <Text
                 style={[
                   styles.optionText,
-                  hadCraving === true && styles.optionTextSelected,
+                  { color: themeColors.text },
+                  hadCraving === true && { color: '#FFFFFF' },
                 ]}
               >
                 Yes
@@ -257,7 +145,8 @@ export default function JournalAddScreen() {
             <TouchableOpacity
               style={[
                 styles.optionButton,
-                hadCraving === false && styles.optionButtonSelected,
+                { backgroundColor: themeColors.card, borderColor: themeColors.border },
+                hadCraving === false && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
               ]}
               onPress={() => {
                 console.log('User selected: No craving');
@@ -267,7 +156,8 @@ export default function JournalAddScreen() {
               <Text
                 style={[
                   styles.optionText,
-                  hadCraving === false && styles.optionTextSelected,
+                  { color: themeColors.text },
+                  hadCraving === false && { color: '#FFFFFF' },
                 ]}
               >
                 No
@@ -279,7 +169,7 @@ export default function JournalAddScreen() {
         {hadCraving && (
           <>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>What triggered it?</Text>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>What triggered it?</Text>
               <View style={styles.optionRow}>
                 {COMMON_TRIGGERS.map((trigger) => {
                   const isSelected = selectedTriggers.includes(trigger);
@@ -288,14 +178,16 @@ export default function JournalAddScreen() {
                       key={trigger}
                       style={[
                         styles.optionButton,
-                        isSelected && styles.optionButtonSelected,
+                        { backgroundColor: themeColors.card, borderColor: themeColors.border },
+                        isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
                       ]}
                       onPress={() => toggleTrigger(trigger)}
                     >
                       <Text
                         style={[
                           styles.optionText,
-                          isSelected && styles.optionTextSelected,
+                          { color: themeColors.text },
+                          isSelected && { color: '#FFFFFF' },
                         ]}
                       >
                         {trigger}
@@ -307,7 +199,7 @@ export default function JournalAddScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Intensity (1-10)</Text>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Intensity (1-10)</Text>
               <View style={styles.intensityContainer}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => {
                   const isSelected = intensity === level;
@@ -316,7 +208,8 @@ export default function JournalAddScreen() {
                       key={level}
                       style={[
                         styles.intensityButton,
-                        isSelected && styles.intensityButtonSelected,
+                        { backgroundColor: themeColors.card, borderColor: themeColors.border },
+                        isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
                       ]}
                       onPress={() => {
                         console.log('User selected intensity:', level);
@@ -326,7 +219,8 @@ export default function JournalAddScreen() {
                       <Text
                         style={[
                           styles.intensityText,
-                          isSelected && styles.intensityTextSelected,
+                          { color: themeColors.text },
+                          isSelected && { color: '#FFFFFF' },
                         ]}
                       >
                         {level}
@@ -338,7 +232,7 @@ export default function JournalAddScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tools used</Text>
+              <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Tools used</Text>
               <View style={styles.optionRow}>
                 {COMMON_TOOLS.map((tool) => {
                   const isSelected = selectedTools.includes(tool);
@@ -347,14 +241,16 @@ export default function JournalAddScreen() {
                       key={tool}
                       style={[
                         styles.optionButton,
-                        isSelected && styles.optionButtonSelected,
+                        { backgroundColor: themeColors.card, borderColor: themeColors.border },
+                        isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
                       ]}
                       onPress={() => toggleTool(tool)}
                     >
                       <Text
                         style={[
                           styles.optionText,
-                          isSelected && styles.optionTextSelected,
+                          { color: themeColors.text },
+                          isSelected && { color: '#FFFFFF' },
                         ]}
                       >
                         {tool}
@@ -368,12 +264,13 @@ export default function JournalAddScreen() {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Outcome</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Outcome</Text>
           <View style={{ flexDirection: 'row' }}>
             <TouchableOpacity
               style={[
                 styles.outcomeButton,
-                outcome === 'resisted' && styles.outcomeButtonSelected,
+                { borderColor: themeColors.border },
+                outcome === 'resisted' && { borderColor: themeColors.primary, backgroundColor: themeColors.card },
               ]}
               onPress={() => {
                 console.log('User selected outcome: resisted');
@@ -384,15 +281,16 @@ export default function JournalAddScreen() {
                 ios_icon_name="check-circle"
                 android_material_icon_name="check-circle"
                 size={32}
-                color={outcome === 'resisted' ? '#4CAF50' : colors.textSecondary}
+                color={outcome === 'resisted' ? '#4CAF50' : themeColors.textSecondary}
               />
-              <Text style={styles.outcomeText}>Resisted</Text>
+              <Text style={[styles.outcomeText, { color: themeColors.text }]}>Resisted</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.outcomeButton,
-                outcome === 'partial' && styles.outcomeButtonSelected,
+                { borderColor: themeColors.border },
+                outcome === 'partial' && { borderColor: themeColors.primary, backgroundColor: themeColors.card },
               ]}
               onPress={() => {
                 console.log('User selected outcome: partial');
@@ -403,15 +301,16 @@ export default function JournalAddScreen() {
                 ios_icon_name="warning"
                 android_material_icon_name="warning"
                 size={32}
-                color={outcome === 'partial' ? '#FF9800' : colors.textSecondary}
+                color={outcome === 'partial' ? '#FF9800' : themeColors.textSecondary}
               />
-              <Text style={styles.outcomeText}>Partial</Text>
+              <Text style={[styles.outcomeText, { color: themeColors.text }]}>Partial</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.outcomeButton,
-                outcome === 'used' && styles.outcomeButtonSelected,
+                { borderColor: themeColors.border },
+                outcome === 'used' && { borderColor: themeColors.primary, backgroundColor: themeColors.card },
               ]}
               onPress={() => {
                 console.log('User selected outcome: used');
@@ -422,19 +321,19 @@ export default function JournalAddScreen() {
                 ios_icon_name="error"
                 android_material_icon_name="error"
                 size={32}
-                color={outcome === 'used' ? colors.primary : colors.textSecondary}
+                color={outcome === 'used' ? themeColors.primary : themeColors.textSecondary}
               />
-              <Text style={styles.outcomeText}>Used</Text>
+              <Text style={[styles.outcomeText, { color: themeColors.text }]}>Used</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notes (optional)</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Notes (optional)</Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { backgroundColor: themeColors.card, borderColor: themeColors.border, color: themeColors.text }]}
             placeholder="Add any additional notes..."
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={themeColors.textSecondary}
             value={notes}
             onChangeText={setNotes}
             multiline
@@ -442,17 +341,88 @@ export default function JournalAddScreen() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity
-        style={[styles.saveButton, (!canSave || saving) && styles.saveButtonDisabled]}
-        onPress={handleSave}
-        disabled={!canSave || saving}
-      >
-        {saving ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.saveButtonText}>Save Entry</Text>
-        )}
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <Button
+          onPress={handleSave}
+          disabled={!canSave}
+          loading={saving}
+        >
+          Save Entry
+        </Button>
+      </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  optionText: {
+    fontSize: 14,
+  },
+  outcomeButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  outcomeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  intensityContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  intensityButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  intensityText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  textInput: {
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  buttonContainer: {
+    padding: 20,
+    paddingBottom: 10,
+  },
+});
