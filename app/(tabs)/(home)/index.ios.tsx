@@ -1,6 +1,7 @@
 
 import { Stack } from 'expo-router';
-import { IconSymbol } from '@/components/IconSymbol';
+import { User } from '@/types/models';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -14,12 +15,11 @@ import {
   Linking,
   Modal,
 } from 'react-native';
-import { colors } from '@/styles/commonStyles';
-import { useAuth } from '@/contexts/AuthContext';
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { IconSymbol } from '@/components/IconSymbol';
 import { authenticatedGet } from '@/utils/api';
-import { User } from '@/types/models';
+import { colors } from '@/styles/commonStyles';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 60,
     paddingBottom: 16,
   },
   logo: {
@@ -114,6 +114,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.dark.background,
   },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.dark.background,
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: colors.dark.error,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: colors.dark.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -175,6 +199,7 @@ const styles = StyleSheet.create({
 export default function HomeScreen() {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const router = useRouter();
@@ -182,53 +207,85 @@ export default function HomeScreen() {
   const { user } = useAuth();
 
   useEffect(() => {
+    console.log('[Home iOS] Component mounted, loading profile...');
     loadProfile();
   }, []);
 
   const loadProfile = async () => {
     try {
-      console.log('[Home] Loading user profile...');
-      const data = await authenticatedGet<User>('/api/user/profile');
-      console.log('[Home] Profile loaded:', data);
+      console.log('[Home iOS] Starting profile load...');
+      setError(null);
+      
+      // Add timeout to prevent infinite hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Profile request timeout after 10 seconds')), 10000);
+      });
+
+      const profilePromise = authenticatedGet<User>('/api/user/profile');
+      
+      console.log('[Home iOS] Waiting for profile response...');
+      const data = await Promise.race([profilePromise, timeoutPromise]);
+      
+      console.log('[Home iOS] Profile loaded successfully:', data);
       setProfile(data);
     } catch (error) {
-      console.error('[Home] Failed to load profile:', error);
+      console.error('[Home iOS] Failed to load profile:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load profile');
     } finally {
+      console.log('[Home iOS] Profile load complete, setting loading to false');
       setLoading(false);
     }
   };
 
   const onRefresh = async () => {
+    console.log('[Home iOS] User triggered refresh');
     setRefreshing(true);
     await loadProfile();
     setRefreshing(false);
   };
 
   const handleCallEmergency = () => {
-    console.log('[Home] User tapped Call Emergency');
+    console.log('[Home iOS] User tapped Call Emergency');
     if (profile?.sponsor_phone) {
-      console.log('[Home] Opening dialer with sponsor phone:', profile.sponsor_phone);
+      console.log('[Home iOS] Opening dialer with sponsor phone:', profile.sponsor_phone);
       Linking.openURL(`tel:${profile.sponsor_phone}`);
     } else {
-      console.log('[Home] No sponsor phone set, showing modal');
+      console.log('[Home iOS] No sponsor phone set, showing modal');
       setShowModal(true);
     }
   };
 
   const handleModalGoToSettings = () => {
-    console.log('[Home] User chose to go to Settings');
+    console.log('[Home iOS] User chose to go to Settings');
     setShowModal(false);
     router.push('/(tabs)/settings');
   };
 
   if (loading) {
+    console.log('[Home iOS] Rendering loading state');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.dark.primary} />
+        <Text style={{ color: colors.dark.textSecondary, marginTop: 16 }}>
+          Loading your profile...
+        </Text>
       </View>
     );
   }
 
+  if (error) {
+    console.log('[Home iOS] Rendering error state:', error);
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  console.log('[Home iOS] Rendering main content');
   const displayName = profile?.display_name || user?.name || user?.email?.split('@')[0] || 'there';
   const welcomeBackText = 'Welcome back';
   const subtitleText = 'One day at a time';
@@ -237,12 +294,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
-
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -261,7 +313,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() => {
-              console.log('[Home] User tapped Settings button');
+              console.log('[Home iOS] User tapped Settings button');
               router.push('/(tabs)/settings');
             }}
           >
@@ -285,7 +337,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.cravingButton}
           onPress={() => {
-            console.log('[Home] User tapped craving button');
+            console.log('[Home iOS] User tapped craving button');
             router.push('/craving-flow');
           }}
         >
@@ -300,7 +352,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.tile}
               onPress={() => {
-                console.log('[Home] User tapped Journal tile');
+                console.log('[Home iOS] User tapped Journal tile');
                 router.push('/journal');
               }}
             >
@@ -318,7 +370,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.tile}
               onPress={() => {
-                console.log('[Home] User tapped Calendar tile');
+                console.log('[Home iOS] User tapped Calendar tile');
                 router.push('/calendar');
               }}
             >
@@ -339,7 +391,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.tile}
               onPress={() => {
-                console.log('[Home] User tapped Progress tile');
+                console.log('[Home iOS] User tapped Progress tile');
                 router.push('/(tabs)/progress');
               }}
             >
@@ -357,7 +409,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.tile}
               onPress={() => {
-                console.log('[Home] User tapped Coping Tools tile');
+                console.log('[Home iOS] User tapped Coping Tools tile');
                 router.push('/(tabs)/coping-tools');
               }}
             >
@@ -378,7 +430,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.tile}
               onPress={() => {
-                console.log('[Home] User tapped Resources tile');
+                console.log('[Home iOS] User tapped Resources tile');
                 router.push('/resources');
               }}
             >
@@ -428,7 +480,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => {
-                  console.log('[Home] User cancelled modal');
+                  console.log('[Home iOS] User cancelled modal');
                   setShowModal(false);
                 }}
               >

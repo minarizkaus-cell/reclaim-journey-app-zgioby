@@ -1,30 +1,39 @@
 
 import React from 'react';
-import { Redirect } from 'expo-router';
-import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
-import { useAuth } from '@/contexts/AuthContext';
+import { useColorScheme } from 'react-native';
+import FloatingTabBar from '@/components/FloatingTabBar';
+import { colors } from '@/styles/commonStyles';
 
 export default function TabLayout() {
-  const { user, loading } = useAuth();
+  const colorScheme = useColorScheme();
+  const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
 
-  if (loading) {
-    return null;
-  }
+  const tabs = [
+    {
+      name: 'Home',
+      route: '/(tabs)/(home)/',
+      ios_icon_name: 'house.fill',
+      android_material_icon_name: 'home' as const,
+    },
+    {
+      name: 'Coping Tools',
+      route: '/(tabs)/coping-tools',
+      ios_icon_name: 'heart.fill',
+      android_material_icon_name: 'favorite' as const,
+    },
+    {
+      name: 'Progress',
+      route: '/(tabs)/progress',
+      ios_icon_name: 'chart.bar.fill',
+      android_material_icon_name: 'trending-up' as const,
+    },
+    {
+      name: 'Settings',
+      route: '/(tabs)/settings',
+      ios_icon_name: 'gearshape.fill',
+      android_material_icon_name: 'settings' as const,
+    },
+  ];
 
-  if (!user) {
-    return <Redirect href="/auth" />;
-  }
-
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="(home)">
-        <Label>Journal</Label>
-        <Icon sf={{ default: 'book', selected: 'book.fill' }} drawable="book" />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Label>Profile</Label>
-        <Icon sf={{ default: 'person', selected: 'person.fill' }} drawable="person" />
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
+  return <FloatingTabBar tabs={tabs} />;
 }

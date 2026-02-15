@@ -1,8 +1,6 @@
 
+import { User } from '@/types/models';
 import { useRouter } from 'expo-router';
-import { colors } from '@/styles/commonStyles';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconSymbol } from '@/components/IconSymbol';
 import {
   View,
   Text,
@@ -16,10 +14,12 @@ import {
   Linking,
   Modal,
 } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { IconSymbol } from '@/components/IconSymbol';
 import { authenticatedGet } from '@/utils/api';
+import { colors } from '@/styles/commonStyles';
 import React, { useState, useEffect } from 'react';
-import { User } from '@/types/models';
+import { useAuth } from '@/contexts/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const styles = StyleSheet.create({
   container: {
@@ -114,6 +114,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.dark.background,
   },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.dark.background,
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: colors.dark.error,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: colors.dark.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -175,6 +199,7 @@ const styles = StyleSheet.create({
 export default function HomeScreen() {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const router = useRouter();
@@ -182,23 +207,38 @@ export default function HomeScreen() {
   const { user } = useAuth();
 
   useEffect(() => {
+    console.log('[Home] Component mounted, loading profile...');
     loadProfile();
   }, []);
 
   const loadProfile = async () => {
     try {
-      console.log('[Home] Loading user profile...');
-      const data = await authenticatedGet<User>('/api/user/profile');
-      console.log('[Home] Profile loaded:', data);
+      console.log('[Home] Starting profile load...');
+      setError(null);
+      
+      // Add timeout to prevent infinite hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Profile request timeout after 10 seconds')), 10000);
+      });
+
+      const profilePromise = authenticatedGet<User>('/api/user/profile');
+      
+      console.log('[Home] Waiting for profile response...');
+      const data = await Promise.race([profilePromise, timeoutPromise]);
+      
+      console.log('[Home] Profile loaded successfully:', data);
       setProfile(data);
     } catch (error) {
       console.error('[Home] Failed to load profile:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load profile');
     } finally {
+      console.log('[Home] Profile load complete, setting loading to false');
       setLoading(false);
     }
   };
 
   const onRefresh = async () => {
+    console.log('[Home] User triggered refresh');
     setRefreshing(true);
     await loadProfile();
     setRefreshing(false);
@@ -222,13 +262,30 @@ export default function HomeScreen() {
   };
 
   if (loading) {
+    console.log('[Home] Rendering loading state');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.dark.primary} />
+        <Text style={{ color: colors.dark.textSecondary, marginTop: 16 }}>
+          Loading your profile...
+        </Text>
       </View>
     );
   }
 
+  if (error) {
+    console.log('[Home] Rendering error state:', error);
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadProfile}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  console.log('[Home] Rendering main content');
   const displayName = profile?.display_name || user?.name || user?.email?.split('@')[0] || 'there';
   const welcomeBackText = 'Welcome back';
   const subtitleText = 'One day at a time';

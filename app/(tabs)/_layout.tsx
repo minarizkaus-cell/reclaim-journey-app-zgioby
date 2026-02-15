@@ -1,23 +1,12 @@
 
 import React from 'react';
 import { useColorScheme } from 'react-native';
-import { Redirect } from 'expo-router';
 import FloatingTabBar from '@/components/FloatingTabBar';
-import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/styles/commonStyles';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return null;
-  }
-
-  if (!user) {
-    return <Redirect href="/auth" />;
-  }
 
   const tabs = [
     {
