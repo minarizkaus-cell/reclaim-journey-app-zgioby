@@ -199,99 +199,116 @@ export default function CopingToolsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {copingTools.map((tool) => {
-          const isExpanded = expandedId === tool.id;
-          const isCompleted = isToolCompleted(tool.id);
-          const isMandatory = isToolMandatory(tool.id);
-          const isCompletingThis = completing === tool.id;
+        {copingTools.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <IconSymbol
+              ios_icon_name="heart.slash"
+              android_material_icon_name="heart-broken"
+              size={64}
+              color={themeColors.textSecondary}
+            />
+            <Text style={[styles.emptyText, { color: themeColors.text }]}>
+              No tools available
+            </Text>
+            <Text style={[styles.emptySubtext, { color: themeColors.textSecondary }]}>
+              Check back later for coping strategies
+            </Text>
+          </View>
+        ) : (
+          copingTools.map((tool) => {
+            const isExpanded = expandedId === tool.id;
+            const isCompleted = isToolCompleted(tool.id);
+            const isMandatory = isToolMandatory(tool.id);
+            const isCompletingThis = completing === tool.id;
 
-          return (
-            <View
-              key={tool.id}
-              style={[
-                styles.toolCard,
-                {
-                  backgroundColor: themeColors.card,
-                  borderColor: isCompleted ? '#4CAF50' : themeColors.border,
-                  borderWidth: isCompleted ? 2 : 1,
-                },
-              ]}
-            >
-              <TouchableOpacity
-                onPress={() => toggleExpand(tool.id)}
-                activeOpacity={0.7}
+            return (
+              <View
+                key={tool.id}
+                style={[
+                  styles.toolCard,
+                  {
+                    backgroundColor: themeColors.card,
+                    borderColor: isCompleted ? '#4CAF50' : themeColors.border,
+                    borderWidth: isCompleted ? 2 : 1,
+                  },
+                ]}
               >
-                <View style={styles.toolHeader}>
-                  <View style={[styles.iconContainer, { backgroundColor: `${themeColors.primary}20` }]}>
-                    <IconSymbol
-                      ios_icon_name="heart.fill"
-                      android_material_icon_name="air"
-                      size={28}
-                      color={themeColors.primary}
-                    />
-                  </View>
-                  <View style={styles.toolInfo}>
-                    <View style={styles.toolTitleRow}>
-                      <Text style={[styles.toolTitle, { color: themeColors.text }]}>
-                        {tool.title}
-                      </Text>
-                      {isMandatory && (
-                        <View style={[styles.mandatoryBadge, { backgroundColor: themeColors.primary }]}>
-                          <Text style={styles.mandatoryText}>Required</Text>
-                        </View>
-                      )}
+                <TouchableOpacity
+                  onPress={() => toggleExpand(tool.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.toolHeader}>
+                    <View style={[styles.iconContainer, { backgroundColor: `${themeColors.primary}20` }]}>
+                      <IconSymbol
+                        ios_icon_name="heart.fill"
+                        android_material_icon_name="air"
+                        size={28}
+                        color={themeColors.primary}
+                      />
                     </View>
-                    <Text style={[styles.toolDuration, { color: themeColors.textSecondary }]}>
-                      {tool.duration} • {tool.when_to_use}
-                    </Text>
-                  </View>
-                  {isCompleted ? (
-                    <IconSymbol
-                      ios_icon_name="checkmark.circle.fill"
-                      android_material_icon_name="check-circle"
-                      size={28}
-                      color="#4CAF50"
-                    />
-                  ) : (
-                    <IconSymbol
-                      ios_icon_name={isExpanded ? 'chevron.up' : 'chevron.down'}
-                      android_material_icon_name={isExpanded ? 'expand-less' : 'expand-more'}
-                      size={24}
-                      color={themeColors.textSecondary}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {isExpanded && (
-                <View style={styles.stepsContainer}>
-                  <Text style={[styles.stepsTitle, { color: themeColors.text }]}>Steps:</Text>
-                  {tool.steps.map((step, index) => {
-                    const stepNumber = `${index + 1}`;
-                    return (
-                      <View key={index} style={styles.stepRow}>
-                        <View style={[styles.stepNumber, { backgroundColor: themeColors.primary }]}>
-                          <Text style={styles.stepNumberText}>{stepNumber}</Text>
-                        </View>
-                        <Text style={[styles.stepText, { color: themeColors.textSecondary }]}>{step}</Text>
+                    <View style={styles.toolInfo}>
+                      <View style={styles.toolTitleRow}>
+                        <Text style={[styles.toolTitle, { color: themeColors.text }]}>
+                          {tool.title}
+                        </Text>
+                        {isMandatory && (
+                          <View style={[styles.mandatoryBadge, { backgroundColor: themeColors.primary }]}>
+                            <Text style={styles.mandatoryText}>Required</Text>
+                          </View>
+                        )}
                       </View>
-                    );
-                  })}
+                      <Text style={[styles.toolDuration, { color: themeColors.textSecondary }]}>
+                        {tool.duration} • {tool.when_to_use}
+                      </Text>
+                    </View>
+                    {isCompleted ? (
+                      <IconSymbol
+                        ios_icon_name="checkmark.circle.fill"
+                        android_material_icon_name="check-circle"
+                        size={28}
+                        color="#4CAF50"
+                      />
+                    ) : (
+                      <IconSymbol
+                        ios_icon_name={isExpanded ? 'chevron.up' : 'chevron.down'}
+                        android_material_icon_name={isExpanded ? 'expand-less' : 'expand-more'}
+                        size={24}
+                        color={themeColors.textSecondary}
+                      />
+                    )}
+                  </View>
+                </TouchableOpacity>
 
-                  {!isCompleted && (
-                    <Button
-                      onPress={() => handleCompleteTool(tool.id)}
-                      loading={isCompletingThis}
-                      style={styles.completeButton}
-                    >
-                      Mark as Completed
-                    </Button>
-                  )}
-                </View>
-              )}
-            </View>
-          );
-        })}
+                {isExpanded && (
+                  <View style={styles.stepsContainer}>
+                    <Text style={[styles.stepsTitle, { color: themeColors.text }]}>Steps:</Text>
+                    {tool.steps.map((step, index) => {
+                      const stepNumber = `${index + 1}`;
+                      return (
+                        <View key={index} style={styles.stepRow}>
+                          <View style={[styles.stepNumber, { backgroundColor: themeColors.primary }]}>
+                            <Text style={styles.stepNumberText}>{stepNumber}</Text>
+                          </View>
+                          <Text style={[styles.stepText, { color: themeColors.textSecondary }]}>{step}</Text>
+                        </View>
+                      );
+                    })}
+
+                    {!isCompleted && (
+                      <Button
+                        onPress={() => handleCompleteTool(tool.id)}
+                        loading={isCompletingThis}
+                        style={styles.completeButton}
+                      >
+                        Mark as Completed
+                      </Button>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })
+        )}
       </ScrollView>
 
       <Modal
@@ -407,6 +424,22 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 100,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 15,
+    textAlign: 'center',
   },
   toolCard: {
     borderRadius: 16,

@@ -87,6 +87,11 @@ export default function HomeScreen() {
     router.push('/(tabs)/settings');
   };
 
+  const handleFindNAMeeting = () => {
+    console.log('[Home iOS] User tapped Find NA Meeting button');
+    Linking.openURL('https://www.na.org/meetingsearch/');
+  };
+
   if (loading) {
     console.log('[Home iOS] Rendering loading state');
     return (
@@ -280,6 +285,19 @@ export default function HomeScreen() {
               <Text style={[styles.tileText, { color: themeColors.text }]}>Call Emergency</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[styles.naMeetingButton, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
+            onPress={handleFindNAMeeting}
+          >
+            <IconSymbol
+              ios_icon_name="location.fill"
+              android_material_icon_name="place"
+              size={20}
+              color={themeColors.primary}
+            />
+            <Text style={[styles.naMeetingButtonText, { color: themeColors.text }]}>Find NA Meeting</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -398,6 +416,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  naMeetingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: 6,
+    marginTop: 8,
+    gap: 8,
+  },
+  naMeetingButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,

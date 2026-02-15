@@ -55,16 +55,17 @@ export default function JournalAddScreen() {
   const [outcome, setOutcome] = useState<'resisted' | 'partial' | 'used' | null>(null);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const toggleTrigger = (trigger: string) => {
-    console.log('User toggled trigger:', trigger);
+    console.log('[JournalAdd] User toggled trigger:', trigger);
     setSelectedTriggers((prev) =>
       prev.includes(trigger) ? prev.filter((t) => t !== trigger) : [...prev, trigger]
     );
   };
 
   const toggleTool = (tool: string) => {
-    console.log('User toggled tool:', tool);
+    console.log('[JournalAdd] User toggled tool:', tool);
     setSelectedTools((prev) =>
       prev.includes(tool) ? prev.filter((t) => t !== tool) : [...prev, tool]
     );
@@ -72,13 +73,16 @@ export default function JournalAddScreen() {
 
   const handleSave = async () => {
     if (hadCraving === null || outcome === null) {
-      console.log('Cannot save: missing required fields');
+      console.log('[JournalAdd] Cannot save: missing required fields');
+      setError('Please answer all required questions');
       return;
     }
 
     setSaving(true);
+    setError('');
+    
     try {
-      console.log('Saving journal entry...', {
+      console.log('[JournalAdd] Saving journal entry...', {
         hadCraving,
         triggers: selectedTriggers,
         intensity,
@@ -96,10 +100,11 @@ export default function JournalAddScreen() {
         notes: notes || undefined,
       });
 
-      console.log('Journal entry saved successfully, navigating back');
+      console.log('[JournalAdd] Journal entry saved successfully, navigating back');
       router.back();
     } catch (error) {
-      console.error('Failed to save journal entry:', error);
+      console.error('[JournalAdd] Failed to save journal entry:', error);
+      setError('Failed to save entry. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -128,7 +133,7 @@ export default function JournalAddScreen() {
                 hadCraving === true && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
               ]}
               onPress={() => {
-                console.log('User selected: Had craving');
+                console.log('[JournalAdd] User selected: Had craving');
                 setHadCraving(true);
               }}
             >
@@ -149,7 +154,7 @@ export default function JournalAddScreen() {
                 hadCraving === false && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
               ]}
               onPress={() => {
-                console.log('User selected: No craving');
+                console.log('[JournalAdd] User selected: No craving');
                 setHadCraving(false);
               }}
             >
@@ -212,7 +217,7 @@ export default function JournalAddScreen() {
                         isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
                       ]}
                       onPress={() => {
-                        console.log('User selected intensity:', level);
+                        console.log('[JournalAdd] User selected intensity:', level);
                         setIntensity(level);
                       }}
                     >
@@ -273,7 +278,7 @@ export default function JournalAddScreen() {
                 outcome === 'resisted' && { borderColor: themeColors.primary, backgroundColor: themeColors.card },
               ]}
               onPress={() => {
-                console.log('User selected outcome: resisted');
+                console.log('[JournalAdd] User selected outcome: resisted');
                 setOutcome('resisted');
               }}
             >
@@ -293,7 +298,7 @@ export default function JournalAddScreen() {
                 outcome === 'partial' && { borderColor: themeColors.primary, backgroundColor: themeColors.card },
               ]}
               onPress={() => {
-                console.log('User selected outcome: partial');
+                console.log('[JournalAdd] User selected outcome: partial');
                 setOutcome('partial');
               }}
             >
@@ -313,7 +318,7 @@ export default function JournalAddScreen() {
                 outcome === 'used' && { borderColor: themeColors.primary, backgroundColor: themeColors.card },
               ]}
               onPress={() => {
-                console.log('User selected outcome: used');
+                console.log('[JournalAdd] User selected outcome: used');
                 setOutcome('used');
               }}
             >
@@ -339,6 +344,12 @@ export default function JournalAddScreen() {
             multiline
           />
         </View>
+
+        {error ? (
+          <Text style={[styles.errorText, { color: themeColors.error }]}>
+            {error}
+          </Text>
+        ) : null}
       </ScrollView>
 
       <View style={styles.buttonContainer}>
@@ -420,6 +431,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 100,
     textAlignVertical: 'top',
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 16,
   },
   buttonContainer: {
     padding: 20,

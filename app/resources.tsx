@@ -60,6 +60,14 @@ const resources: Resource[] = [
   },
   {
     id: '5',
+    title: 'NA Meeting Search',
+    description: 'Find Narcotics Anonymous meetings near you',
+    website: 'https://www.na.org/meetingsearch/',
+    icon: 'search',
+    type: 'support',
+  },
+  {
+    id: '6',
     title: 'SMART Recovery',
     description: 'Science-based addiction recovery support groups',
     website: 'https://www.smartrecovery.org',
@@ -67,7 +75,7 @@ const resources: Resource[] = [
     type: 'support',
   },
   {
-    id: '6',
+    id: '7',
     title: 'National Institute on Drug Abuse',
     description: 'Research and information on drug abuse and addiction',
     website: 'https://www.drugabuse.gov',
@@ -82,10 +90,12 @@ export default function ResourcesScreen() {
 
   const handlePhonePress = (phone: string) => {
     const phoneNumber = phone.replace(/[^0-9]/g, '');
+    console.log('[Resources] Opening phone dialer:', phoneNumber);
     Linking.openURL(`tel:${phoneNumber}`);
   };
 
   const handleWebsitePress = (website: string) => {
+    console.log('[Resources] Opening website:', website);
     Linking.openURL(website);
   };
 
@@ -136,7 +146,7 @@ export default function ResourcesScreen() {
             <View style={styles.emergencyText}>
               <Text style={styles.emergencyTitle}>In Crisis?</Text>
               <Text style={styles.emergencySubtitle}>
-                If you're in immediate danger, call 911 or go to the nearest emergency room
+                If you&apos;re in immediate danger, call 911 or go to the nearest emergency room
               </Text>
             </View>
           </View>
