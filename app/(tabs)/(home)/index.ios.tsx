@@ -19,6 +19,7 @@ import { authenticatedGet } from '@/utils/api';
 import { colors } from '@/styles/commonStyles';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { getJFTReading, getFirstTwoSentences, getJFTUrl } from '@/services/justForTodayService';
 
 export default function HomeScreen() {
   const [profile, setProfile] = useState<User | null>(null);
@@ -26,6 +27,8 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [jftReading, setJftReading] = useState<string | null>(null);
+  const [jftLoading, setJftLoading] = useState(true);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const { user } = useAuth();
@@ -34,8 +37,9 @@ export default function HomeScreen() {
   const themeColors = isDark ? colors.dark : colors.light;
 
   useEffect(() => {
-    console.log('[Home iOS] Component mounted, loading profile...');
+    console.log('[Home iOS] Component mounted, loading profile and JFT...');
     loadProfile();
+    loadJFT();
   }, []);
 
   const loadProfile = async () => {
@@ -63,10 +67,25 @@ export default function HomeScreen() {
     }
   };
 
+  const loadJFT = async () => {
+    try {
+      console.log('[Home iOS] Loading Just For Today reading...');
+      setJftLoading(true);
+      const reading = await getJFTReading();
+      setJftReading(reading);
+      console.log('[Home iOS] JFT reading loaded:', reading ? 'success' : 'no reading available');
+    } catch (error) {
+      console.error('[Home iOS] Failed to load JFT reading:', error);
+      setJftReading(null);
+    } finally {
+      setJftLoading(false);
+    }
+  };
+
   const onRefresh = async () => {
     console.log('[Home iOS] User triggered refresh');
     setRefreshing(true);
-    await loadProfile();
+    await Promise.all([loadProfile(), loadJFT()]);
     setRefreshing(false);
   };
 
@@ -90,6 +109,17 @@ export default function HomeScreen() {
   const handleFindNAMeeting = () => {
     console.log('[Home iOS] User tapped Find NA Meeting button');
     Linking.openURL('https://www.na.org/meetingsearch/');
+  };
+
+  const handleJFTPress = async () => {
+    console.log('[Home iOS] User tapped Just For Today widget');
+    const url = getJFTUrl();
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      await Linking.openURL(url);
+    } else {
+      console.error('[Home iOS] Cannot open JFT URL:', url);
+    }
   };
 
   if (loading) {
@@ -126,6 +156,20 @@ export default function HomeScreen() {
   const cravingButtonText = "I'M HAVING A CRAVING";
   const cravingButtonSubtitle = 'Start a guided reset';
   const appTitle = 'MyRecovery';
+  const jftTitle = 'Just For Today';
+  const moreText = 'more';
+
+  // Prepare JFT display text
+  let jftDisplayText = '';
+  let jftFallbackText = '';
+  
+  if (jftLoading) {
+    jftDisplayText = 'Loading today\'s reading...';
+  } else if (jftReading) {
+    jftDisplayText = getFirstTwoSentences(jftReading);
+  } else {
+    jftFallbackText = 'Today\'s reading unavailable. Tap to open.';
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -164,6 +208,36 @@ export default function HomeScreen() {
         </View>
 
         <TouchableOpacity
+          style={[styles.jftWidget, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
+          onPress={handleJFTPress}
+          activeOpacity={0.7}
+        >
+          <View style={styles.jftHeader}>
+            <IconSymbol
+              ios_icon_name="book.fill"
+              android_material_icon_name="menu-book"
+              size={20}
+              color={themeColors.primary}
+            />
+            <Text style={[styles.jftTitle, { color: themeColors.primary }]}>{jftTitle}</Text>
+          </View>
+          {jftLoading ? (
+            <ActivityIndicator size="small" color={themeColors.textSecondary} style={styles.jftLoader} />
+          ) : jftReading ? (
+            <View style={styles.jftContent}>
+              <Text style={[styles.jftText, { color: themeColors.text }]}>
+                {jftDisplayText}
+                <Text style={[styles.jftMore, { color: themeColors.primary }]}> {moreText}</Text>
+              </Text>
+            </View>
+          ) : (
+            <Text style={[styles.jftFallback, { color: themeColors.textSecondary }]}>{jftFallbackText}</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+
+        <TouchableOpacity
           style={[styles.cravingButton, { backgroundColor: themeColors.primary }]}
           onPress={() => {
             console.log('[Home iOS] User tapped craving button');
@@ -187,7 +261,7 @@ export default function HomeScreen() {
                 <IconSymbol
                   ios_icon_name="book"
                   android_material_icon_name="menu-book"
-                  size={32}
+                  size={28}
                   color={themeColors.text}
                 />
               </View>
@@ -205,7 +279,7 @@ export default function HomeScreen() {
                 <IconSymbol
                   ios_icon_name="calendar"
                   android_material_icon_name="calendar-today"
-                  size={32}
+                  size={28}
                   color={themeColors.text}
                 />
               </View>
@@ -225,7 +299,7 @@ export default function HomeScreen() {
                 <IconSymbol
                   ios_icon_name="chart"
                   android_material_icon_name="show-chart"
-                  size={32}
+                  size={28}
                   color={themeColors.text}
                 />
               </View>
@@ -243,7 +317,7 @@ export default function HomeScreen() {
                 <IconSymbol
                   ios_icon_name="heart"
                   android_material_icon_name="favorite"
-                  size={32}
+                  size={28}
                   color={themeColors.text}
                 />
               </View>
@@ -263,7 +337,7 @@ export default function HomeScreen() {
                 <IconSymbol
                   ios_icon_name="info"
                   android_material_icon_name="info"
-                  size={32}
+                  size={28}
                   color={themeColors.text}
                 />
               </View>
@@ -278,7 +352,7 @@ export default function HomeScreen() {
                 <IconSymbol
                   ios_icon_name="phone"
                   android_material_icon_name="phone"
-                  size={32}
+                  size={28}
                   color={themeColors.primary}
                 />
               </View>
@@ -360,7 +434,7 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   welcomeText: {
     fontSize: 15,
@@ -374,16 +448,56 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 15,
   },
+  jftWidget: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  jftHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+  jftTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  jftContent: {
+    minHeight: 40,
+  },
+  jftText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  jftMore: {
+    fontWeight: '700',
+  },
+  jftFallback: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    minHeight: 40,
+  },
+  jftLoader: {
+    marginVertical: 10,
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
   cravingButton: {
     marginHorizontal: 20,
-    marginBottom: 24,
-    padding: 20,
+    marginBottom: 20,
+    padding: 22,
     borderRadius: 16,
     alignItems: 'center',
   },
   cravingButtonText: {
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 4,
   },
@@ -397,23 +511,23 @@ const styles = StyleSheet.create({
   },
   tilesRow: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   tile: {
     flex: 1,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     marginHorizontal: 6,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 120,
+    minHeight: 96,
   },
   tileIcon: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   tileText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -421,15 +535,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
     marginHorizontal: 6,
-    marginTop: 8,
+    marginTop: 4,
     gap: 8,
   },
   naMeetingButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   loadingContainer: {
