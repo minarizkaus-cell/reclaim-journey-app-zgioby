@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Reclaim Journey",
+    "slug": "Reclaim Journey",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/app-icon-dgf.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/app-icon-dgf.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.Natively",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/app-icon-dgf.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.Natively"
+    },
+    "web": {
+      "favicon": "./assets/images/final_quest_240x240.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-router",
+      "expo-web-browser"
+    ],
+    "scheme": "Reclaim Journey",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "backendUrl": "https://q2hx4dn58vv2vm8cp97dykxef293m4ck.app.specular.dev"
+    }
+  }
+}
