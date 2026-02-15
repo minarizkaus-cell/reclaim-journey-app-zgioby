@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -44,11 +44,7 @@ export default function CopingToolsScreen() {
   const fromCravingFlow = params.fromCravingFlow === 'true';
   const sessionId = params.sessionId as string | undefined;
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       console.log('[CopingTools] Loading coping tools and completions...');
@@ -72,7 +68,11 @@ export default function CopingToolsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sessionId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Check if a tool is mandatory based on hardcoded IDs
   const isToolMandatory = (toolId: string) => {

@@ -15,7 +15,7 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { JournalEntry } from '@/types/models';
 
 const styles = StyleSheet.create({
@@ -172,11 +172,7 @@ export default function JournalDetailScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
 
-  useEffect(() => {
-    loadEntry();
-  }, [id]);
-
-  const loadEntry = async () => {
+  const loadEntry = useCallback(async () => {
     try {
       console.log('Loading journal entry:', id);
       // TODO: Backend Integration - GET /api/journal/:id → { id, created_at, had_craving, triggers, intensity, tools_used, outcome, notes }
@@ -195,7 +191,11 @@ export default function JournalDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, router]);
+
+  useEffect(() => {
+    loadEntry();
+  }, [loadEntry]);
 
   const handleDelete = async () => {
     setDeleting(true);

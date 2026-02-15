@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -39,17 +39,7 @@ export default function CalendarScreen() {
   const [time, setTime] = useState('09:00');
   const [duration, setDuration] = useState('60');
 
-  useEffect(() => {
-    loadMonthEvents();
-  }, [currentMonth]);
-
-  useEffect(() => {
-    if (selectedDate) {
-      filterEventsForDate(selectedDate);
-    }
-  }, [events, selectedDate]);
-
-  const loadMonthEvents = async () => {
+  const loadMonthEvents = useCallback(async () => {
     setLoading(true);
     try {
       const monthStr = currentMonth.format('YYYY-MM');
@@ -63,12 +53,22 @@ export default function CalendarScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentMonth]);
 
-  const filterEventsForDate = (date: string) => {
+  const filterEventsForDate = useCallback((date: string) => {
     const filtered = events.filter(event => event.date === date);
     setSelectedDateEvents(filtered);
-  };
+  }, [events]);
+
+  useEffect(() => {
+    loadMonthEvents();
+  }, [loadMonthEvents]);
+
+  useEffect(() => {
+    if (selectedDate) {
+      filterEventsForDate(selectedDate);
+    }
+  }, [selectedDate, filterEventsForDate]);
 
   const handlePrevMonth = () => {
     setCurrentMonth(currentMonth.subtract(1, 'month'));
