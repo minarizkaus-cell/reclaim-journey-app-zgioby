@@ -90,7 +90,6 @@ export default function AuthScreen() {
         console.log('[Auth] Signing in with email...');
         await signInWithEmail(email, password);
         
-        // Check onboarding status after login
         console.log('[Auth] Login successful, checking onboarding status...');
         const profile = await authenticatedGet<User>('/api/user/profile');
         console.log('[Auth] Profile loaded:', profile);
@@ -132,7 +131,6 @@ export default function AuthScreen() {
         await signInWithApple();
       }
       
-      // Check onboarding status after social auth
       console.log('[Auth] Social auth successful, checking onboarding status...');
       const profile = await authenticatedGet<User>('/api/user/profile');
       console.log('[Auth] Profile loaded:', profile);
@@ -169,8 +167,6 @@ export default function AuthScreen() {
   const isLoginMode = mode === 'login';
   const buttonText = isLoginMode ? 'Login' : 'Register';
   const toggleText = isLoginMode ? "Don't have an account? Register" : 'Already have an account? Login';
-  const appNameText = 'MyRecovery';
-  const taglineText = 'Your recovery companion';
 
   return (
     <KeyboardAvoidingView
@@ -182,7 +178,6 @@ export default function AuthScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
-          {/* Logo */}
           <View style={styles.logoContainer}>
             <Image
               source={require('@/assets/images/app-icon-dgf.png')}
@@ -191,29 +186,24 @@ export default function AuthScreen() {
             />
           </View>
 
-          {/* App Name */}
           <Text style={[styles.appName, { color: colors.dark.primary }]}>
-            {appNameText}
+            MyRecovery
           </Text>
 
-          {/* Tagline */}
           <Text style={[styles.tagline, { color: colors.dark.textSecondary }]}>
-            {taglineText}
+            Your recovery companion
           </Text>
 
-          {/* Title */}
           <Text style={[styles.title, { color: colors.dark.text }]}>
             {buttonText}
           </Text>
 
-          {/* Error Message */}
           {errorMessage ? (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           ) : null}
 
-          {/* Display Name (Register only) */}
           {!isLoginMode && (
             <TextInput
               style={[styles.input, { 
@@ -230,7 +220,6 @@ export default function AuthScreen() {
             />
           )}
 
-          {/* Email */}
           <TextInput
             style={[styles.input, { 
               backgroundColor: colors.dark.card, 
@@ -247,7 +236,6 @@ export default function AuthScreen() {
             editable={!loading}
           />
 
-          {/* Password */}
           <TextInput
             style={[styles.input, { 
               backgroundColor: colors.dark.card, 
@@ -263,7 +251,6 @@ export default function AuthScreen() {
             editable={!loading}
           />
 
-          {/* Confirm Password (Register only) */}
           {!isLoginMode && (
             <TextInput
               style={[styles.input, { 
@@ -281,7 +268,6 @@ export default function AuthScreen() {
             />
           )}
 
-          {/* Submit Button */}
           <TouchableOpacity
             style={[
               styles.primaryButton, 
@@ -298,7 +284,6 @@ export default function AuthScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Toggle Mode Button */}
           <TouchableOpacity
             style={styles.switchModeButton}
             onPress={toggleMode}
@@ -309,7 +294,6 @@ export default function AuthScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Divider */}
           <View style={styles.divider}>
             <View style={[styles.dividerLine, { backgroundColor: colors.dark.border }]} />
             <Text style={[styles.dividerText, { color: colors.dark.textSecondary }]}>
@@ -318,7 +302,6 @@ export default function AuthScreen() {
             <View style={[styles.dividerLine, { backgroundColor: colors.dark.border }]} />
           </View>
 
-          {/* Social Auth Buttons */}
           <TouchableOpacity
             style={[styles.socialButton, { 
               borderColor: colors.dark.border,

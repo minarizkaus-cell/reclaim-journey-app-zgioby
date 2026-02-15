@@ -36,7 +36,7 @@ export default function ProgressScreen() {
     try {
       const [profileData, entriesData] = await Promise.all([
         authenticatedGet<User>('/api/user/profile'),
-        authenticatedGet<JournalEntry[]>('/api/journal/entries'),
+        authenticatedGet<JournalEntry[]>('/api/journal'),
       ]);
       console.log('Progress: Profile loaded:', profileData);
       console.log('Progress: Entries loaded:', entriesData?.length || 0, 'entries');
