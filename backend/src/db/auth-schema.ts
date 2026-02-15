@@ -8,13 +8,12 @@ export const user = pgTable("user", {
   image: text("image"),
   displayName: text("display_name"),
   timezone: text("timezone"),
-  sponsorName: text("sponsor_name"),
-  sponsorPhone: text("sponsor_phone"),
   emergencyContactName: text("emergency_contact_name"),
   emergencyContactPhone: text("emergency_contact_phone"),
   timerMinutes: integer("timer_minutes").notNull().default(15),
   sobrietyDate: date("sobriety_date"),
   onboarded: boolean("onboarded").notNull().default(false),
+  registrationTimestamp: timestamp("registration_timestamp", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
