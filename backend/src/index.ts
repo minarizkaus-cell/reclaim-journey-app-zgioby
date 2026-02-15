@@ -16,7 +16,13 @@ export const app = await createApplication(schema);
 export type App = typeof app;
 
 // Enable authentication with Better Auth
-app.withAuth();
+// Email/password authentication is enabled by default in Better Auth
+// Disable email verification requirement to allow immediate login after signup
+app.withAuth({
+  emailVerification: {
+    sendOnSignUp: false,
+  },
+});
 
 // Register routes - add your route modules here
 // IMPORTANT: Always use registration functions to avoid circular dependency issues
