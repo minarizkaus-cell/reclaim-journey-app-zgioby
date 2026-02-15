@@ -1,12 +1,11 @@
-/**
- * Define your database schema here using Drizzle ORM
- *
- * Example:
- * import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
- *
- * export const users = pgTable('users', {
- *   id: uuid('id').primaryKey().defaultRandom(),
- *   name: text('name').notNull(),
- *   createdAt: timestamp('created_at').notNull().defaultNow(),
- * });
- */
+import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
+import { user } from './auth-schema.js';
+
+export const journalEntries = pgTable('journal_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  mood: text('mood', { enum: ['great', 'good', 'okay', 'struggling', 'difficult'] }).notNull(),
+  triggers: text('triggers').array(),
+  notes: text('notes'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
