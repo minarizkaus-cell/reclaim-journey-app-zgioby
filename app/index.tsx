@@ -28,7 +28,6 @@ export default function IndexScreen() {
       console.log('[Index] Checking onboarding status...');
       setError(null);
       
-      // Reduced timeout for faster failure
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Request timeout after 5 seconds')), 5000);
       });
@@ -43,7 +42,6 @@ export default function IndexScreen() {
       console.error('[Index] Failed to check onboarding status:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to load profile';
       setError(errorMsg);
-      // If we can't check, assume they need onboarding
       setIsOnboarded(false);
     } finally {
       setCheckingOnboarding(false);
@@ -99,8 +97,8 @@ export default function IndexScreen() {
     return <Redirect href="/onboarding" />;
   }
 
-  console.log('[Index] Redirecting to /(tabs)/(home)/');
-  return <Redirect href="/(tabs)/(home)/" />;
+  console.log('[Index] Redirecting to /home');
+  return <Redirect href="/home" />;
 }
 
 const styles = StyleSheet.create({

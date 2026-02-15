@@ -4,7 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useColorScheme, TouchableOpacity, View, StyleSheet } from "react-native";
+import { useColorScheme, TouchableOpacity, View, StyleSheet, Image, Text } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import {
@@ -32,7 +32,7 @@ function HeaderRightButtons() {
         style={styles.headerButton}
         onPress={() => {
           console.log('[Header] User tapped Home icon');
-          router.push('/(tabs)/(home)/');
+          router.push('/home');
         }}
       >
         <IconSymbol
@@ -46,7 +46,7 @@ function HeaderRightButtons() {
         style={styles.headerButton}
         onPress={() => {
           console.log('[Header] User tapped Settings icon');
-          router.push('/(tabs)/settings');
+          router.push('/settings');
         }}
       >
         <IconSymbol
@@ -57,6 +57,49 @@ function HeaderRightButtons() {
         />
       </TouchableOpacity>
     </View>
+  );
+}
+
+function HomeHeaderLeft() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const themeColors = isDark ? colors.dark : colors.light;
+
+  return (
+    <View style={styles.homeHeaderLeft}>
+      <Image
+        source={require('@/assets/images/final_quest_240x240.png')}
+        style={styles.logo}
+        resizeMode="contain"
+      />
+      <Text style={[styles.appName, { color: themeColors.text }]}>
+        MyRecovery
+      </Text>
+    </View>
+  );
+}
+
+function HomeHeaderRight() {
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const themeColors = isDark ? colors.dark : colors.light;
+
+  return (
+    <TouchableOpacity
+      style={styles.headerButton}
+      onPress={() => {
+        console.log('[Header] User tapped Settings icon from Home');
+        router.push('/settings');
+      }}
+    >
+      <IconSymbol
+        ios_icon_name="gear"
+        android_material_icon_name="settings"
+        size={24}
+        color={themeColors.text}
+      />
+    </TouchableOpacity>
   );
 }
 
@@ -83,13 +126,73 @@ export default function RootLayout() {
         <SystemBars style="light" />
         <AuthProvider>
           <WidgetProvider>
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack 
+              screenOptions={{ 
+                headerShown: false,
+                headerStyle: {
+                  backgroundColor: colors.dark.background,
+                },
+                headerTintColor: colors.dark.text,
+                headerTitleStyle: {
+                  fontWeight: '600',
+                  fontSize: 18,
+                },
+              }}
+            >
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="auth" options={{ headerShown: false }} />
               <Stack.Screen name="auth-popup" options={{ headerShown: false }} />
               <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              
+              {/* Home screen with custom header */}
+              <Stack.Screen 
+                name="home" 
+                options={{ 
+                  headerShown: true,
+                  headerLeft: () => <HomeHeaderLeft />,
+                  headerRight: () => <HomeHeaderRight />,
+                  headerTitle: '',
+                  headerStyle: {
+                    backgroundColor: colors.dark.background,
+                  },
+                }} 
+              />
+              
+              {/* Settings screen */}
+              <Stack.Screen 
+                name="settings" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Settings",
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
+                }} 
+              />
+              
+              {/* Coping Tools screen */}
+              <Stack.Screen 
+                name="coping-tools" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Coping Tools",
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
+                }} 
+              />
+              
+              {/* Progress screen */}
+              <Stack.Screen 
+                name="progress" 
+                options={{ 
+                  headerShown: true, 
+                  title: "Progress",
+                  headerBackTitle: "Back",
+                  headerRight: () => <HeaderRightButtons />
+                }} 
+              />
+              
+              {/* Craving Flow */}
               <Stack.Screen 
                 name="craving-flow" 
                 options={{ 
@@ -99,6 +202,8 @@ export default function RootLayout() {
                   headerRight: () => <HeaderRightButtons />
                 }} 
               />
+              
+              {/* Journal screens */}
               <Stack.Screen 
                 name="journal" 
                 options={{ 
@@ -127,6 +232,8 @@ export default function RootLayout() {
                   headerRight: () => <HeaderRightButtons />
                 }} 
               />
+              
+              {/* Calendar */}
               <Stack.Screen 
                 name="calendar" 
                 options={{ 
@@ -136,6 +243,8 @@ export default function RootLayout() {
                   headerRight: () => <HeaderRightButtons />
                 }} 
               />
+              
+              {/* Resources */}
               <Stack.Screen 
                 name="resources" 
                 options={{ 
@@ -145,6 +254,8 @@ export default function RootLayout() {
                   headerRight: () => <HeaderRightButtons />
                 }} 
               />
+              
+              {/* Profile Settings */}
               <Stack.Screen 
                 name="profile-settings" 
                 options={{ 
@@ -154,6 +265,8 @@ export default function RootLayout() {
                   headerRight: () => <HeaderRightButtons />
                 }} 
               />
+              
+              {/* Verify Email */}
               <Stack.Screen 
                 name="verify-email" 
                 options={{ 
@@ -162,6 +275,7 @@ export default function RootLayout() {
                   headerBackTitle: "Back",
                 }} 
               />
+              
               <Stack.Screen name="+not-found" />
             </Stack>
             <StatusBar style="light" />
@@ -181,5 +295,20 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
+  },
+  homeHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 16,
+    gap: 8,
+  },
+  logo: {
+    width: 32,
+    height: 32,
+  },
+  appName: {
+    fontSize: 20,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });

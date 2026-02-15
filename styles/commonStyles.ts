@@ -1,7 +1,7 @@
 
 import { StyleSheet } from 'react-native';
 
-// MyRecovery App - Calm Neutral Palette
+// MyRecovery App - Calm Neutral Palette (Updated)
 export const colors = {
   // Dark mode (primary theme)
   dark: {
@@ -16,6 +16,7 @@ export const colors = {
     success: '#4DAA8C',
     warning: '#FFB74D',
     error: '#D65A5A',
+    ctaRed: '#D65A5A',
     moodGreat: '#4DAA8C',
     moodGood: '#6C8CF5',
     moodOkay: '#A8B0BA',
@@ -35,6 +36,7 @@ export const colors = {
     success: '#4DAA8C',
     warning: '#FFB74D',
     error: '#D65A5A',
+    ctaRed: '#D65A5A',
     moodGreat: '#4DAA8C',
     moodGood: '#6C8CF5',
     moodOkay: '#A8B0BA',

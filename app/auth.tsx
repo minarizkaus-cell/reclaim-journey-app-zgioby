@@ -13,69 +13,66 @@ import {
   Image,
   Modal,
 } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { colors } from '@/styles/commonStyles';
-import { authenticatedGet, apiPost } from '@/utils/api';
-import { User } from '@/types/models';
 import { IconSymbol } from '@/components/IconSymbol';
 import { authClient } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
+import { authenticatedGet, apiPost } from '@/utils/api';
+import { User } from '@/types/models';
 
 type Mode = 'login' | 'register';
 
 export default function AuthScreen() {
+  const { setUser } = useAuth();
   const router = useRouter();
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, loading: authLoading } = useAuth();
 
   const [mode, setMode] = useState<Mode>('login');
-  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-
-  // Password visibility toggles
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Inline validation errors
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [displayNameError, setDisplayNameError] = useState('');
 
-  // Forgot password state
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
-  const [forgotPasswordError, setForgotPasswordError] = useState('');
-  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState('');
 
-  if (authLoading) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.dark.background }]}>
-        <ActivityIndicator size="large" color={colors.dark.primary} />
-      </View>
-    );
-  }
-
-  const isValidEmail = (emailText: string): boolean => {
+  const isValidEmail = (emailText: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(emailText);
   };
 
-  // Password validation: min 8 chars, only letters+numbers, 1 uppercase, 1 lowercase, 1 number
-  const isValidPassword = (passwordText: string): boolean => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z0-9]{8,}$/;
-    return passwordRegex.test(passwordText);
+  const isValidPassword = (passwordText: string) => {
+    if (passwordText.length < 8) {
+      return false;
+    }
+    if (!/[A-Z]/.test(passwordText)) {
+      return false;
+    }
+    if (!/[a-z]/.test(passwordText)) {
+      return false;
+    }
+    if (!/[0-9]/.test(passwordText)) {
+      return false;
+    }
+    if (/[^a-zA-Z0-9]/.test(passwordText)) {
+      return false;
+    }
+    return true;
   };
 
   const validateEmailField = (text: string) => {
     setEmail(text);
-    if (!text.trim()) {
-      setEmailError('Email is required');
-    } else if (!isValidEmail(text)) {
+    if (text && !isValidEmail(text)) {
       setEmailError('Please enter a valid email address');
     } else {
       setEmailError('');
@@ -84,12 +81,20 @@ export default function AuthScreen() {
 
   const validatePasswordField = (text: string) => {
     setPassword(text);
-    if (!text.trim()) {
-      setPasswordError('Password is required');
-    } else if (mode === 'register' && !isValidPassword(text)) {
-      setPasswordError('Min 8 chars, 1 uppercase, 1 lowercase, 1 number, no spaces/special chars');
-    } else if (mode === 'login' && text.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
+    if (mode === 'register' && text) {
+      if (text.length < 8) {
+        setPasswordError('Password must be at least 8 characters');
+      } else if (!/[A-Z]/.test(text)) {
+        setPasswordError('Password must include at least 1 uppercase letter');
+      } else if (!/[a-z]/.test(text)) {
+        setPasswordError('Password must include at least 1 lowercase letter');
+      } else if (!/[0-9]/.test(text)) {
+        setPasswordError('Password must include at least 1 number');
+      } else if (/[^a-zA-Z0-9]/.test(text)) {
+        setPasswordError('Password must only contain letters and numbers');
+      } else {
+        setPasswordError('');
+      }
     } else {
       setPasswordError('');
     }
@@ -97,9 +102,7 @@ export default function AuthScreen() {
 
   const validateConfirmPasswordField = (text: string) => {
     setConfirmPassword(text);
-    if (!text.trim()) {
-      setConfirmPasswordError('Please confirm your password');
-    } else if (text !== password) {
+    if (mode === 'register' && text && text !== password) {
       setConfirmPasswordError('Passwords do not match');
     } else {
       setConfirmPasswordError('');
@@ -108,324 +111,252 @@ export default function AuthScreen() {
 
   const validateDisplayNameField = (text: string) => {
     setDisplayName(text);
-    if (!text.trim()) {
-      setDisplayNameError('Display name is required');
+    if (mode === 'register' && text && text.length < 2) {
+      setDisplayNameError('Name must be at least 2 characters');
     } else {
       setDisplayNameError('');
     }
   };
 
-  const validateFields = (): boolean => {
-    const isLoginMode = mode === 'login';
+  const validateFields = () => {
     let isValid = true;
 
-    // Validate email
-    if (!email.trim()) {
-      setEmailError('Email is required');
-      isValid = false;
-    } else if (!isValidEmail(email)) {
+    if (!email || !isValidEmail(email)) {
       setEmailError('Please enter a valid email address');
       isValid = false;
     }
 
-    // Validate password
-    if (!password.trim()) {
-      setPasswordError('Password is required');
-      isValid = false;
-    } else if (isLoginMode && password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
-      isValid = false;
-    } else if (!isLoginMode && !isValidPassword(password)) {
-      setPasswordError('Min 8 chars, 1 uppercase, 1 lowercase, 1 number, no spaces/special chars');
-      isValid = false;
-    }
-
-    // Validate register-specific fields
-    if (!isLoginMode) {
-      if (!displayName.trim()) {
-        setDisplayNameError('Display name is required');
+    if (mode === 'register') {
+      if (!displayName || displayName.length < 2) {
+        setDisplayNameError('Name must be at least 2 characters');
         isValid = false;
       }
 
-      if (!confirmPassword.trim()) {
-        setConfirmPasswordError('Please confirm your password');
+      if (!password || !isValidPassword(password)) {
+        setPasswordError('Password must be 8+ characters with uppercase, lowercase, and number');
         isValid = false;
-      } else if (password !== confirmPassword) {
+      }
+
+      if (password !== confirmPassword) {
         setConfirmPasswordError('Passwords do not match');
         isValid = false;
       }
-    }
-
-    if (!isValid) {
-      setErrorMessage('Please fix the errors above');
+    } else {
+      if (!password) {
+        setPasswordError('Please enter your password');
+        isValid = false;
+      }
     }
 
     return isValid;
   };
 
   const handleAuth = async () => {
-    console.log('[Auth] Starting authentication, mode:', mode);
-    
+    console.log('[Auth] User tapped', mode === 'login' ? 'Login' : 'Register');
+
     if (!validateFields()) {
+      console.log('[Auth] Validation failed');
       return;
     }
 
     setLoading(true);
-    setErrorMessage('');
 
     try {
-      const isLoginMode = mode === 'login';
-      
-      if (isLoginMode) {
-        console.log('[Auth] Signing in with email...');
-        await signInWithEmail(email, password);
-        
-        console.log('[Auth] Login successful, checking onboarding status...');
+      if (mode === 'login') {
+        console.log('[Auth] Attempting login...');
+        const result = await authClient.signIn.email({
+          email,
+          password,
+        });
+
+        if (result.error) {
+          console.error('[Auth] Login error:', result.error);
+          setPasswordError('Invalid email or password');
+          setLoading(false);
+          return;
+        }
+
+        console.log('[Auth] Login successful');
         const profile = await authenticatedGet<User>('/api/user/profile');
-        console.log('[Auth] Profile loaded:', profile);
-        
-        const onboardedStatus = profile.onboarded;
-        
-        if (onboardedStatus) {
-          console.log('[Auth] User is onboarded, redirecting to home...');
-          router.replace('/(tabs)/(home)/');
-        } else {
-          console.log('[Auth] User not onboarded, redirecting to onboarding...');
+        setUser(profile);
+
+        if (!profile.onboarded) {
+          console.log('[Auth] User not onboarded, redirecting to onboarding');
           router.replace('/onboarding');
+        } else {
+          console.log('[Auth] User onboarded, redirecting to home');
+          router.replace('/home');
         }
       } else {
-        console.log('[Auth] Signing up with email...');
-        await signUpWithEmail(email, password, displayName);
-        
-        console.log('[Auth] Registration successful, redirecting to onboarding...');
+        console.log('[Auth] Attempting registration...');
+        const result = await authClient.signUp.email({
+          email,
+          password,
+          name: displayName,
+        });
+
+        if (result.error) {
+          console.error('[Auth] Registration error:', result.error);
+          setEmailError('Registration failed. Email may already be in use.');
+          setLoading(false);
+          return;
+        }
+
+        console.log('[Auth] Registration successful');
+        const profile = await authenticatedGet<User>('/api/user/profile');
+        setUser(profile);
+
+        console.log('[Auth] Redirecting to onboarding');
         router.replace('/onboarding');
       }
-    } catch (error: any) {
-      console.error('[Auth] Authentication error:', error);
-      let errorMsg = 'Authentication failed. Please try again.';
-      
-      if (error.message) {
-        if (error.message.includes('Invalid credentials') || error.message.includes('401')) {
-          errorMsg = 'Invalid email or password';
-        } else if (error.message.includes('already exists') || error.message.includes('409')) {
-          errorMsg = 'An account with this email already exists';
-        } else if (error.message.includes('password') && error.message.includes('requirements')) {
-          errorMsg = 'Password must be 8+ chars with 1 uppercase, 1 lowercase, 1 number, no special chars';
-        } else if (error.message.includes('network') || error.message.includes('fetch')) {
-          errorMsg = 'Network error. Please check your connection.';
-        }
+    } catch (error) {
+      console.error('[Auth] Auth error:', error);
+      if (mode === 'login') {
+        setPasswordError('Invalid email or password');
+      } else {
+        setEmailError('Registration failed. Please try again.');
       }
-      
-      setErrorMessage(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSocialAuth = async (provider: 'google' | 'apple') => {
-    console.log('[Auth] Starting social auth with:', provider);
-    setLoading(true);
-    setErrorMessage('');
-    
-    try {
-      if (provider === 'google') {
-        await signInWithGoogle();
-      } else if (provider === 'apple') {
-        await signInWithApple();
-      }
-      
-      console.log('[Auth] Social auth successful, checking onboarding status...');
-      const profile = await authenticatedGet<User>('/api/user/profile');
-      console.log('[Auth] Profile loaded:', profile);
-      
-      const onboardedStatus = profile.onboarded;
-      
-      if (onboardedStatus) {
-        console.log('[Auth] User is onboarded, redirecting to home...');
-        router.replace('/(tabs)/(home)/');
-      } else {
-        console.log('[Auth] User not onboarded, redirecting to onboarding...');
-        router.replace('/onboarding');
-      }
-    } catch (error: any) {
-      console.error('[Auth] Social auth error:', error);
-      const errorMsg = 'Social authentication failed. Please try again.';
-      setErrorMessage(errorMsg);
-    } finally {
-      setLoading(false);
-    }
+    console.log('[Auth] User tapped', provider, 'sign in');
+    console.log('[Auth] Social auth not yet implemented');
   };
 
   const handleForgotPassword = async () => {
-    console.log('[Auth] Forgot password requested for:', forgotPasswordEmail);
-    
-    if (!forgotPasswordEmail.trim()) {
-      setForgotPasswordError('Please enter your email address');
-      return;
-    }
-    
-    if (!isValidEmail(forgotPasswordEmail)) {
-      setForgotPasswordError('Please enter a valid email address');
+    if (!forgotPasswordEmail || !isValidEmail(forgotPasswordEmail)) {
+      setForgotPasswordMessage('Please enter a valid email address');
       return;
     }
 
     setForgotPasswordLoading(true);
-    setForgotPasswordError('');
-    setForgotPasswordSuccess('');
+    setForgotPasswordMessage('');
 
     try {
-      // Better Auth handles password reset through its own flow
-      // We use the authClient to trigger the forgot password flow
+      console.log('[Auth] Sending password reset email to:', forgotPasswordEmail);
       await authClient.forgetPassword({
         email: forgotPasswordEmail,
-        redirectTo: '/auth', // Redirect back to auth screen after reset
+        redirectTo: '/auth',
       });
-      
-      console.log('[Auth] Password reset email sent');
-      const successMsg = 'If an account with that email exists, a reset link has been sent.';
-      setForgotPasswordSuccess(successMsg);
-      setForgotPasswordError('');
-      
-      setTimeout(() => {
-        setShowForgotPasswordModal(false);
-        setForgotPasswordEmail('');
-        setForgotPasswordSuccess('');
-      }, 3000);
-    } catch (error: any) {
+      setForgotPasswordMessage('If an account exists with this email, a password reset link has been sent.');
+    } catch (error) {
       console.error('[Auth] Forgot password error:', error);
-      setForgotPasswordError('Could not process request. Please try again later.');
+      setForgotPasswordMessage('An error occurred. Please try again.');
     } finally {
       setForgotPasswordLoading(false);
     }
   };
 
   const toggleMode = () => {
-    const newMode = mode === 'login' ? 'register' : 'login';
-    console.log('[Auth] Toggling mode to:', newMode);
-    setMode(newMode);
-    setErrorMessage('');
-    setDisplayName('');
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
+    console.log('[Auth] Toggling mode from', mode, 'to', mode === 'login' ? 'register' : 'login');
+    setMode(mode === 'login' ? 'register' : 'login');
     setEmailError('');
     setPasswordError('');
     setConfirmPasswordError('');
     setDisplayNameError('');
-    setShowPassword(false);
-    setShowConfirmPassword(false);
   };
 
   const openForgotPasswordModal = () => {
-    console.log('[Auth] Opening forgot password modal');
     setShowForgotPasswordModal(true);
     setForgotPasswordEmail(email);
-    setForgotPasswordError('');
-    setForgotPasswordSuccess('');
+    setForgotPasswordMessage('');
   };
 
   const closeForgotPasswordModal = () => {
     setShowForgotPasswordModal(false);
     setForgotPasswordEmail('');
-    setForgotPasswordError('');
-    setForgotPasswordSuccess('');
+    setForgotPasswordMessage('');
   };
 
+  const themeColors = colors.dark;
   const isLoginMode = mode === 'login';
-  const buttonText = isLoginMode ? 'Login' : 'Register';
-  const toggleText = isLoginMode ? "Don't have an account? Register" : 'Already have an account? Login';
-  const isFormValid = isLoginMode 
-    ? email && password && !emailError && !passwordError
-    : email && password && confirmPassword && displayName && !emailError && !passwordError && !confirmPasswordError && !displayNameError;
+  const modeTitle = isLoginMode ? 'Welcome Back' : 'Create Account';
+  const modeButtonText = isLoginMode ? 'Login' : 'Register';
+  const modeToggleText = isLoginMode ? 'Don\'t have an account?' : 'Already have an account?';
+  const modeToggleButtonText = isLoginMode ? 'Register' : 'Login';
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.dark.background }]}
+      style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.content}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('@/assets/images/app-icon-dgf.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-
-          <Text style={[styles.appName, { color: colors.dark.primary }]}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/images/final_quest_240x240.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.appName, { color: themeColors.text }]}>
             MyRecovery
           </Text>
+        </View>
 
-          <Text style={[styles.tagline, { color: colors.dark.textSecondary }]}>
-            Your recovery companion
+        <View style={styles.formContainer}>
+          <Text style={[styles.title, { color: themeColors.text }]}>
+            {modeTitle}
           </Text>
-
-          <Text style={[styles.title, { color: colors.dark.text }]}>
-            {buttonText}
-          </Text>
-
-          {errorMessage ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-          ) : null}
 
           {!isLoginMode && (
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { 
-                  backgroundColor: colors.dark.card, 
-                  borderColor: displayNameError ? '#E57373' : colors.dark.border,
-                  color: colors.dark.text 
-                }]}
+                style={[
+                  styles.input,
+                  { backgroundColor: themeColors.card, color: themeColors.text, borderColor: displayNameError ? themeColors.error : themeColors.border },
+                ]}
                 placeholder="Display Name"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={themeColors.textSecondary}
                 value={displayName}
                 onChangeText={validateDisplayNameField}
                 autoCapitalize="words"
                 editable={!loading}
               />
               {displayNameError ? (
-                <Text style={styles.fieldError}>{displayNameError}</Text>
+                <Text style={[styles.errorText, { color: themeColors.error }]}>
+                  {displayNameError}
+                </Text>
               ) : null}
             </View>
           )}
 
           <View style={styles.inputContainer}>
             <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.dark.card, 
-                borderColor: emailError ? '#E57373' : colors.dark.border,
-                color: colors.dark.text 
-              }]}
+              style={[
+                styles.input,
+                { backgroundColor: themeColors.card, color: themeColors.text, borderColor: emailError ? themeColors.error : themeColors.border },
+              ]}
               placeholder="Email"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={themeColors.textSecondary}
               value={email}
               onChangeText={validateEmailField}
               keyboardType="email-address"
               autoCapitalize="none"
-              autoCorrect={false}
               editable={!loading}
             />
             {emailError ? (
-              <Text style={styles.fieldError}>{emailError}</Text>
+              <Text style={[styles.errorText, { color: themeColors.error }]}>
+                {emailError}
+              </Text>
             ) : null}
           </View>
 
           <View style={styles.inputContainer}>
-            <View style={styles.passwordInputWrapper}>
+            <View style={styles.passwordContainer}>
               <TextInput
-                style={[styles.passwordInput, { 
-                  backgroundColor: colors.dark.card, 
-                  borderColor: passwordError ? '#E57373' : colors.dark.border,
-                  color: colors.dark.text 
-                }]}
+                style={[
+                  styles.input,
+                  styles.passwordInput,
+                  { backgroundColor: themeColors.card, color: themeColors.text, borderColor: passwordError ? themeColors.error : themeColors.border },
+                ]}
                 placeholder="Password"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={themeColors.textSecondary}
                 value={password}
                 onChangeText={validatePasswordField}
                 secureTextEntry={!showPassword}
@@ -435,44 +366,33 @@ export default function AuthScreen() {
               <TouchableOpacity
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
-                disabled={loading}
               >
                 <IconSymbol
-                  ios_icon_name={showPassword ? "eye.slash.fill" : "eye.fill"}
-                  android_material_icon_name={showPassword ? "visibility-off" : "visibility"}
+                  ios_icon_name={showPassword ? 'eye.slash.fill' : 'eye.fill'}
+                  android_material_icon_name={showPassword ? 'visibility-off' : 'visibility'}
                   size={20}
-                  color={colors.dark.textSecondary}
+                  color={themeColors.textSecondary}
                 />
               </TouchableOpacity>
             </View>
             {passwordError ? (
-              <Text style={styles.fieldError}>{passwordError}</Text>
+              <Text style={[styles.errorText, { color: themeColors.error }]}>
+                {passwordError}
+              </Text>
             ) : null}
           </View>
 
-          {isLoginMode && (
-            <TouchableOpacity
-              style={styles.forgotPasswordButton}
-              onPress={openForgotPasswordModal}
-              disabled={loading}
-            >
-              <Text style={[styles.forgotPasswordText, { color: colors.dark.textSecondary }]}>
-                Forgot Password?
-              </Text>
-            </TouchableOpacity>
-          )}
-
           {!isLoginMode && (
             <View style={styles.inputContainer}>
-              <View style={styles.passwordInputWrapper}>
+              <View style={styles.passwordContainer}>
                 <TextInput
-                  style={[styles.passwordInput, { 
-                    backgroundColor: colors.dark.card, 
-                    borderColor: confirmPasswordError ? '#E57373' : colors.dark.border,
-                    color: colors.dark.text 
-                  }]}
+                  style={[
+                    styles.input,
+                    styles.passwordInput,
+                    { backgroundColor: themeColors.card, color: themeColors.text, borderColor: confirmPasswordError ? themeColors.error : themeColors.border },
+                  ]}
                   placeholder="Confirm Password"
-                  placeholderTextColor={colors.dark.textSecondary}
+                  placeholderTextColor={themeColors.textSecondary}
                   value={confirmPassword}
                   onChangeText={validateConfirmPasswordField}
                   secureTextEntry={!showConfirmPassword}
@@ -482,78 +402,55 @@ export default function AuthScreen() {
                 <TouchableOpacity
                   style={styles.eyeIcon}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={loading}
                 >
                   <IconSymbol
-                    ios_icon_name={showConfirmPassword ? "eye.slash.fill" : "eye.fill"}
-                    android_material_icon_name={showConfirmPassword ? "visibility-off" : "visibility"}
+                    ios_icon_name={showConfirmPassword ? 'eye.slash.fill' : 'eye.fill'}
+                    android_material_icon_name={showConfirmPassword ? 'visibility-off' : 'visibility'}
                     size={20}
-                    color={colors.dark.textSecondary}
+                    color={themeColors.textSecondary}
                   />
                 </TouchableOpacity>
               </View>
               {confirmPasswordError ? (
-                <Text style={styles.fieldError}>{confirmPasswordError}</Text>
+                <Text style={[styles.errorText, { color: themeColors.error }]}>
+                  {confirmPasswordError}
+                </Text>
               ) : null}
             </View>
           )}
 
+          {isLoginMode && (
+            <TouchableOpacity onPress={openForgotPasswordModal}>
+              <Text style={[styles.forgotPassword, { color: themeColors.primary }]}>
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
-            style={[
-              styles.primaryButton, 
-              { backgroundColor: colors.dark.primary },
-              (!isFormValid || loading) && styles.buttonDisabled
-            ]}
+            style={[styles.button, { backgroundColor: themeColors.primary }]}
             onPress={handleAuth}
-            disabled={!isFormValid || loading}
+            disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.primaryButtonText}>{buttonText}</Text>
+              <Text style={styles.buttonText}>
+                {modeButtonText}
+              </Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.switchModeButton}
-            onPress={toggleMode}
-            disabled={loading}
-          >
-            <Text style={[styles.switchModeText, { color: colors.dark.primary }]}>
-              {toggleText}
+          <View style={styles.toggleContainer}>
+            <Text style={[styles.toggleText, { color: themeColors.textSecondary }]}>
+              {modeToggleText}
             </Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={[styles.dividerLine, { backgroundColor: colors.dark.border }]} />
-            <Text style={[styles.dividerText, { color: colors.dark.textSecondary }]}>
-              or continue with
-            </Text>
-            <View style={[styles.dividerLine, { backgroundColor: colors.dark.border }]} />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.socialButton, { 
-              borderColor: colors.dark.border,
-              backgroundColor: colors.dark.card 
-            }]}
-            onPress={() => handleSocialAuth('google')}
-            disabled={loading}
-          >
-            <Text style={[styles.socialButtonText, { color: colors.dark.text }]}>
-              Continue with Google
-            </Text>
-          </TouchableOpacity>
-
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity
-              style={[styles.socialButton, styles.appleButton]}
-              onPress={() => handleSocialAuth('apple')}
-              disabled={loading}
-            >
-              <Text style={styles.appleButtonText}>Continue with Apple</Text>
+            <TouchableOpacity onPress={toggleMode}>
+              <Text style={[styles.toggleButton, { color: themeColors.primary }]}>
+                {modeToggleButtonText}
+              </Text>
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       </ScrollView>
 
@@ -564,74 +461,55 @@ export default function AuthScreen() {
         onRequestClose={closeForgotPasswordModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.dark.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.dark.text }]}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.card }]}>
+            <Text style={[styles.modalTitle, { color: themeColors.text }]}>
               Reset Password
             </Text>
-            
-            <Text style={[styles.modalDescription, { color: colors.dark.textSecondary }]}>
+            <Text style={[styles.modalMessage, { color: themeColors.textSecondary }]}>
               Enter your email address and we&apos;ll send you a link to reset your password.
             </Text>
-
-            {forgotPasswordSuccess ? (
-              <View style={styles.successContainer}>
-                <IconSymbol
-                  ios_icon_name="checkmark.circle.fill"
-                  android_material_icon_name="check-circle"
-                  size={48}
-                  color="#4CAF50"
-                />
-                <Text style={[styles.successText, { color: '#4CAF50' }]}>
-                  {forgotPasswordSuccess}
+            <TextInput
+              style={[
+                styles.input,
+                { backgroundColor: themeColors.background, color: themeColors.text, borderColor: themeColors.border },
+              ]}
+              placeholder="Email"
+              placeholderTextColor={themeColors.textSecondary}
+              value={forgotPasswordEmail}
+              onChangeText={setForgotPasswordEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!forgotPasswordLoading}
+            />
+            {forgotPasswordMessage ? (
+              <Text style={[styles.modalMessage, { color: themeColors.textSecondary }]}>
+                {forgotPasswordMessage}
+              </Text>
+            ) : null}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { borderColor: themeColors.border }]}
+                onPress={closeForgotPasswordModal}
+                disabled={forgotPasswordLoading}
+              >
+                <Text style={[styles.modalButtonText, { color: themeColors.text }]}>
+                  Cancel
                 </Text>
-              </View>
-            ) : (
-              <>
-                <TextInput
-                  style={[styles.modalInput, { 
-                    backgroundColor: colors.dark.background, 
-                    borderColor: forgotPasswordError ? '#E57373' : colors.dark.border,
-                    color: colors.dark.text 
-                  }]}
-                  placeholder="Email"
-                  placeholderTextColor={colors.dark.textSecondary}
-                  value={forgotPasswordEmail}
-                  onChangeText={setForgotPasswordEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!forgotPasswordLoading}
-                />
-                
-                {forgotPasswordError ? (
-                  <Text style={styles.fieldError}>{forgotPasswordError}</Text>
-                ) : null}
-
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.modalButtonSecondary, { borderColor: colors.dark.border }]}
-                    onPress={closeForgotPasswordModal}
-                    disabled={forgotPasswordLoading}
-                  >
-                    <Text style={[styles.modalButtonTextSecondary, { color: colors.dark.text }]}>
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: colors.dark.primary }]}
-                    onPress={handleForgotPassword}
-                    disabled={forgotPasswordLoading}
-                  >
-                    {forgotPasswordLoading ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={styles.modalButtonTextPrimary}>Send Reset Link</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: themeColors.primary }]}
+                onPress={handleForgotPassword}
+                disabled={forgotPasswordLoading}
+              >
+                {forgotPasswordLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextPrimary}>
+                    Send Link
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -643,41 +521,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   scrollContent: {
     flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 24,
     justifyContent: 'center',
+    padding: 24,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 40,
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 80,
+    height: 80,
+    marginBottom: 16,
   },
   appName: {
     fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  tagline: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
+  formContainer: {
+    width: '100%',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '600',
     marginBottom: 24,
     textAlign: 'center',
   },
@@ -685,119 +553,64 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   input: {
-    height: 50,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
   },
-  passwordInputWrapper: {
+  passwordContainer: {
     position: 'relative',
   },
   passwordInput: {
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingRight: 48,
-    fontSize: 16,
+    paddingRight: 50,
   },
   eyeIcon: {
     position: 'absolute',
-    right: 12,
-    top: 15,
+    right: 14,
+    top: 14,
     padding: 4,
   },
-  fieldError: {
-    color: '#E57373',
+  errorText: {
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
   },
-  forgotPasswordButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-    paddingVertical: 4,
+  forgotPassword: {
+    fontSize: 14,
+    textAlign: 'right',
+    marginBottom: 20,
+    fontWeight: '500',
   },
-  forgotPasswordText: {
-    fontSize: 13,
-  },
-  primaryButton: {
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
+  button: {
+    borderRadius: 10,
+    padding: 16,
     alignItems: 'center',
     marginTop: 8,
   },
-  primaryButtonText: {
-    color: '#fff',
+  buttonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  switchModeButton: {
-    marginTop: 16,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  switchModeText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  divider: {
+  toggleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 14,
-  },
-  socialButton: {
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginTop: 24,
+    gap: 6,
   },
-  socialButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  appleButton: {
-    backgroundColor: '#000',
-    borderColor: '#000',
-  },
-  appleButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  errorContainer: {
-    backgroundColor: 'rgba(229, 115, 115, 0.1)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(229, 115, 115, 0.3)',
-  },
-  errorText: {
-    color: '#E57373',
+  toggleText: {
     fontSize: 14,
-    textAlign: 'center',
+  },
+  toggleButton: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 24,
   },
   modalContent: {
@@ -807,59 +620,39 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
     marginBottom: 12,
     textAlign: 'center',
   },
-  modalDescription: {
+  modalMessage: {
     fontSize: 14,
-    marginBottom: 24,
+    marginBottom: 20,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  modalInput: {
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 8,
   },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 16,
+    marginTop: 8,
   },
   modalButton: {
     flex: 1,
-    height: 48,
+    paddingVertical: 12,
     borderRadius: 8,
-    justifyContent: 'center',
+    borderWidth: 1,
     alignItems: 'center',
   },
-  modalButtonSecondary: {
-    borderWidth: 1,
-  },
   modalButtonPrimary: {
+    borderWidth: 0,
   },
-  modalButtonTextSecondary: {
-    fontSize: 16,
+  modalButtonText: {
+    fontSize: 15,
     fontWeight: '500',
   },
   modalButtonTextPrimary: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '600',
-  },
-  successContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  successText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 20,
   },
 });
