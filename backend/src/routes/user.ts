@@ -45,13 +45,22 @@ export function registerUserRoutes(app: App) {
     const normalizedEmail = normalizeEmail(rawEmail || '');
 
     app.logger.info(
-      { email: normalizedEmail, rawEmail },
-      'POST /api/user/check-email - checking email availability'
+      {
+        rawEmail,
+        normalizedEmail,
+      },
+      'POST /api/user/check-email - received email check request'
     );
 
     try {
       if (!isValidEmail(normalizedEmail)) {
-        app.logger.warn({ email: normalizedEmail }, 'Invalid email format provided');
+        app.logger.warn(
+          {
+            normalizedEmail,
+            rawEmail,
+          },
+          'Email format validation failed'
+        );
         return reply.code(400).send({ error: 'Invalid email format' });
       }
 
@@ -65,12 +74,12 @@ export function registerUserRoutes(app: App) {
 
       app.logger.info(
         {
-          email: normalizedEmail,
+          normalizedEmail,
           available,
           existingCount: existingUser.length,
           existingEmails: existingUser.map(u => u.email),
         },
-        'Email availability check completed'
+        'Email availability check completed successfully'
       );
 
       return {
@@ -81,10 +90,11 @@ export function registerUserRoutes(app: App) {
       app.logger.error(
         {
           err: error,
-          email: normalizedEmail,
+          normalizedEmail,
+          rawEmail,
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
         },
-        'Failed to check email availability'
+        'Email availability check failed'
       );
       throw error;
     }
@@ -261,11 +271,23 @@ export function registerUserRoutes(app: App) {
 
       // Check if email is available (only if email is valid)
       let emailExists = false;
+      let foundEmails: string[] = [];
       if (isValidEmail(normalizedEmail)) {
         const existingUser = await app.db
           .select({ id: authSchema.user.id, email: authSchema.user.email })
           .from(authSchema.user)
           .where(eq(authSchema.user.email, normalizedEmail));
+
+        foundEmails = existingUser.map(u => u.email);
+
+        app.logger.info(
+          {
+            normalizedEmail,
+            foundCount: existingUser.length,
+            foundEmails,
+          },
+          'Email existence check completed during validation'
+        );
 
         if (existingUser.length > 0) {
           errors.push('Email address already in use');
@@ -281,6 +303,8 @@ export function registerUserRoutes(app: App) {
           valid,
           errorCount: errors.length,
           emailExists,
+          foundEmails,
+          errors,
         },
         'Registration validation completed'
       );
