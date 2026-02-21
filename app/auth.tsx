@@ -13,13 +13,34 @@ import {
   Image,
   Modal,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { authClient } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedGet, apiPost } from '@/utils/api';
 import { User } from '@/types/models';
+
+// Debug Info Component
+function DebugInfo() {
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+  
+  const userPresent = user ? 'true' : 'false';
+  const isLoadingText = loading ? 'true' : 'false';
+  const onboardedText = 'N/A';
+  const tokenPresent = 'checking...';
+  
+  return (
+    <View style={styles.debugContainer}>
+      <Text style={styles.debugText}>Route: {pathname}</Text>
+      <Text style={styles.debugText}>isLoading: {isLoadingText}</Text>
+      <Text style={styles.debugText}>User present: {userPresent}</Text>
+      <Text style={styles.debugText}>Onboarded: {onboardedText}</Text>
+      <Text style={styles.debugText}>Token present: {tokenPresent}</Text>
+    </View>
+  );
+}
 
 /**
  * Check if an email address is available for registration
@@ -53,7 +74,7 @@ async function validateRegistration(
 type Mode = 'login' | 'register';
 
 export default function AuthScreen() {
-  const { setUser } = useAuth();
+  const { fetchUser } = useAuth();
   const router = useRouter();
 
   const [mode, setMode] = useState<Mode>('login');
@@ -216,9 +237,10 @@ export default function AuthScreen() {
           return;
         }
 
-        console.log('[Auth] Login successful');
+        console.log('[Auth] Login successful, fetching user profile');
+        await fetchUser();
+        
         const profile = await authenticatedGet<User>('/api/user/profile');
-        setUser(profile);
 
         if (!profile.onboarded) {
           console.log('[Auth] User not onboarded, redirecting to onboarding');
@@ -350,9 +372,8 @@ export default function AuthScreen() {
           return;
         }
 
-        console.log('[Auth] Registration successful');
-        const profile = await authenticatedGet<User>('/api/user/profile');
-        setUser(profile);
+        console.log('[Auth] Registration successful, fetching user profile');
+        await fetchUser();
 
         console.log('[Auth] Redirecting to onboarding');
         router.replace('/onboarding');
@@ -447,6 +468,8 @@ export default function AuthScreen() {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <DebugInfo />
+      
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -684,6 +707,15 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  debugContainer: {
+    padding: 10,
+    backgroundColor: '#333',
+  },
+  debugText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   scrollContent: {
     flexGrow: 1,

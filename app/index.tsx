@@ -55,6 +55,7 @@ export default function IndexScreen() {
     checkOnboardingStatus();
   };
 
+  // Wait for auth to finish loading
   if (authLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.dark.background }]}>
@@ -66,6 +67,13 @@ export default function IndexScreen() {
     );
   }
 
+  // No user = redirect to auth
+  if (!user) {
+    console.log('[Index] Redirecting to /auth (no user)');
+    return <Redirect href="/auth" />;
+  }
+
+  // User exists, check onboarding status
   if (checkingOnboarding) {
     return (
       <View style={[styles.container, { backgroundColor: colors.dark.background }]}>
@@ -87,17 +95,14 @@ export default function IndexScreen() {
     );
   }
 
-  if (!user) {
-    console.log('[Index] Redirecting to /auth');
-    return <Redirect href="/auth" />;
-  }
-
+  // User not onboarded = redirect to onboarding
   if (!isOnboarded) {
-    console.log('[Index] Redirecting to /onboarding');
+    console.log('[Index] Redirecting to /onboarding (user not onboarded)');
     return <Redirect href="/onboarding" />;
   }
 
-  console.log('[Index] Redirecting to /home');
+  // User onboarded = redirect to home
+  console.log('[Index] Redirecting to /home (user onboarded)');
   return <Redirect href="/home" />;
 }
 

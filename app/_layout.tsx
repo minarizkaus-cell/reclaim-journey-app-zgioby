@@ -144,6 +144,7 @@ export default function RootLayout() {
               <Stack.Screen name="auth-popup" options={{ headerShown: false }} />
               <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+              <Stack.Screen name="reset" options={{ headerShown: false }} />
               
               {/* Home screen with custom header */}
               <Stack.Screen 

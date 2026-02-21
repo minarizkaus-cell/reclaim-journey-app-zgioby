@@ -12,15 +12,36 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname, Link } from 'expo-router';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { authenticatedPut } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
+// Debug Info Component
+function DebugInfo() {
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+  
+  const userPresent = user ? 'true' : 'false';
+  const isLoadingText = loading ? 'true' : 'false';
+  const onboardedText = 'false';
+  const tokenPresent = 'checking...';
+  
+  return (
+    <View style={styles.debugContainer}>
+      <Text style={styles.debugText}>Route: {pathname}</Text>
+      <Text style={styles.debugText}>isLoading: {isLoadingText}</Text>
+      <Text style={styles.debugText}>User present: {userPresent}</Text>
+      <Text style={styles.debugText}>Onboarded: {onboardedText}</Text>
+      <Text style={styles.debugText}>Token present: {tokenPresent}</Text>
+    </View>
+  );
+}
+
 export default function OnboardingScreen() {
-  const { user } = useAuth();
+  const { user, fetchUser } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
@@ -34,17 +55,24 @@ export default function OnboardingScreen() {
   const [emergencyContactName, setEmergencyContactName] = useState('');
   const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
 
+  // Web-compatible date input
+  const [dateInputValue, setDateInputValue] = useState('');
+
   const handleNext = () => {
     console.log('[Onboarding] User tapped Next, current step:', currentStep);
     if (currentStep < 2) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      console.log('[Onboarding] Advanced to step:', nextStep);
     }
   };
 
   const handleBack = () => {
     console.log('[Onboarding] User tapped Back, current step:', currentStep);
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      console.log('[Onboarding] Went back to step:', prevStep);
     }
   };
 
@@ -55,7 +83,14 @@ export default function OnboardingScreen() {
     try {
       const formattedDate = sobrietyDate ? sobrietyDate.toISOString().split('T')[0] : null;
 
-      console.log('[Onboarding] Saving profile data...');
+      console.log('[Onboarding] Saving profile data...', {
+        sobriety_date: formattedDate,
+        timer_minutes: selectedTimerMinutes,
+        emergency_contact_name: emergencyContactName || null,
+        emergency_contact_phone: emergencyContactPhone || null,
+        onboarded: true,
+      });
+      
       await authenticatedPut('/api/user/profile', {
         sobriety_date: formattedDate,
         timer_minutes: selectedTimerMinutes,
@@ -64,10 +99,14 @@ export default function OnboardingScreen() {
         onboarded: true,
       });
 
-      console.log('[Onboarding] Profile saved, redirecting to home');
+      console.log('[Onboarding] Profile saved, refreshing user session');
+      await fetchUser();
+      
+      console.log('[Onboarding] Redirecting to home');
       router.replace('/home');
     } catch (error) {
       console.error('[Onboarding] Failed to save profile:', error);
+      alert('Failed to save profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -87,6 +126,21 @@ export default function OnboardingScreen() {
 
       console.log('[Onboarding] Sobriety date selected:', selectedDate);
       setSobrietyDate(selectedDate);
+      setDateInputValue(selectedDate.toISOString().split('T')[0]);
+    }
+  };
+
+  const handleWebDateInput = (value: string) => {
+    setDateInputValue(value);
+    if (value) {
+      const date = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (date <= today) {
+        console.log('[Onboarding] Web date input:', date);
+        setSobrietyDate(date);
+      }
     }
   };
 
@@ -131,23 +185,45 @@ export default function OnboardingScreen() {
             When did you start your recovery journey?
           </Text>
 
-          <TouchableOpacity
-            style={[styles.dateButton, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={[styles.dateButtonText, { color: themeColors.text }]}>
-              {formattedDate}
-            </Text>
-          </TouchableOpacity>
+          {Platform.OS === 'web' ? (
+            <View style={styles.webDateContainer}>
+              <TextInput
+                style={[styles.webDateInput, { backgroundColor: themeColors.card, color: themeColors.text, borderColor: themeColors.border }]}
+                value={dateInputValue}
+                onChangeText={handleWebDateInput}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={themeColors.textSecondary}
+              />
+              <Text style={[styles.webDateHelper, { color: themeColors.textSecondary }]}>
+                Enter date in format: YYYY-MM-DD (e.g., 2024-01-15)
+              </Text>
+              {sobrietyDate && (
+                <Text style={[styles.webDateDisplay, { color: themeColors.text }]}>
+                  Selected: {formattedDate}
+                </Text>
+              )}
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[styles.dateButton, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={[styles.dateButtonText, { color: themeColors.text }]}>
+                  {formattedDate}
+                </Text>
+              </TouchableOpacity>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={sobrietyDate || new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleDateChange}
-              maximumDate={new Date()}
-            />
+              {showDatePicker && (
+                <DateTimePicker
+                  value={sobrietyDate || new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                />
+              )}
+            </>
           )}
         </View>
       );
@@ -202,7 +278,10 @@ export default function OnboardingScreen() {
                       { borderColor: themeColors.border },
                       isSelected && { backgroundColor: themeColors.primary, borderColor: themeColors.primary },
                     ]}
-                    onPress={() => setSelectedTimerMinutes(minutes)}
+                    onPress={() => {
+                      console.log('[Onboarding] Timer duration selected:', minutes);
+                      setSelectedTimerMinutes(minutes);
+                    }}
                   >
                     <Text style={[styles.timerOptionText, { color: isSelected ? '#FFFFFF' : themeColors.text }]}>
                       {minutesText}
@@ -224,6 +303,12 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
+      <DebugInfo />
+      
+      <Link href="/reset" style={styles.resetLink}>
+        <Text style={styles.resetLinkText}>Emergency Reset</Text>
+      </Link>
+      
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.progressContainer}>
           {[0, 1, 2].map((step) => {
@@ -258,7 +343,11 @@ export default function OnboardingScreen() {
 
           {currentStep < 2 ? (
             <TouchableOpacity
-              style={[styles.button, styles.buttonPrimary, { backgroundColor: themeColors.primary }]}
+              style={[
+                styles.button, 
+                styles.buttonPrimary, 
+                { backgroundColor: canProceed ? themeColors.primary : themeColors.border }
+              ]}
               onPress={handleNext}
               disabled={!canProceed}
             >
@@ -290,6 +379,29 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  debugContainer: {
+    padding: 10,
+    backgroundColor: '#333',
+    marginBottom: 10,
+  },
+  debugText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  resetLink: {
+    padding: 12,
+    alignItems: 'center',
+    backgroundColor: '#ff3b30',
+    marginHorizontal: 24,
+    marginBottom: 12,
+    borderRadius: 8,
+  },
+  resetLinkText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   scrollContent: {
     flexGrow: 1,
@@ -334,6 +446,27 @@ const styles = StyleSheet.create({
   dateButtonText: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  webDateContainer: {
+    width: '100%',
+    gap: 8,
+  },
+  webDateInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+  },
+  webDateHelper: {
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  webDateDisplay: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
+    marginTop: 8,
   },
   input: {
     width: '100%',
