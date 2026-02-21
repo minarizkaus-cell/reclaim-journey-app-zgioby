@@ -27,8 +27,26 @@ import { User } from '@/types/models';
  */
 async function checkEmailAvailability(email: string): Promise<{ available: boolean; email: string }> {
   console.log('[Auth] Checking email availability for:', email);
-  const result = await apiPost<{ available: boolean; email: string }>('/api/user/check-email', { email });
+  const result = await apiPost<{ available: boolean; email: string }>('/api/user/check-email', { email: email.toLowerCase().trim() });
   console.log('[Auth] Email availability result:', result);
+  return result;
+}
+
+/**
+ * Validate registration data using the backend validation endpoint
+ * Returns validation result with specific error messages from the backend
+ */
+async function validateRegistration(
+  email: string,
+  password: string,
+  name: string
+): Promise<{ valid: boolean; errors: string[]; email: string; suggestions?: string }> {
+  console.log('[Auth] Validating registration data for:', email);
+  const result = await apiPost<{ valid: boolean; errors: string[]; email: string; suggestions?: string }>(
+    '/api/user/validate-registration',
+    { email: email.toLowerCase().trim(), password, name }
+  );
+  console.log('[Auth] Validation result:', result);
   return result;
 }
 
@@ -212,25 +230,86 @@ export default function AuthScreen() {
       } else {
         console.log('[Auth] Attempting registration with email:', email, 'name:', displayName);
 
-        // Pre-check email availability using the dedicated endpoint
-        // This avoids the Better Auth "email already in use" false positive issue
+        // Pre-validate registration data using the dedicated validation endpoint
+        // This provides accurate, backend-driven error messages before attempting signup
         try {
-          const emailCheck = await checkEmailAvailability(email);
-          if (!emailCheck.available) {
-            console.log('[Auth] Email already in use (confirmed by check-email endpoint):', email);
-            setEmailError('This email address is already in use. Please sign in or use a different email.');
+          console.log('[Auth] Pre-validating registration data...');
+          const validation = await validateRegistration(email, password, displayName);
+          console.log('[Auth] Validation result:', validation);
+
+          if (!validation.valid) {
+            console.log('[Auth] Validation failed with errors:', validation.errors);
+            // Parse validation errors and assign to appropriate fields
+            const errors = validation.errors || [];
+            let hasEmailError = false;
+            let hasPasswordError = false;
+
+            for (const err of errors) {
+              const errLower = err.toLowerCase();
+              if (errLower.includes('email') || errLower.includes('already') || errLower.includes('use')) {
+                if (!hasEmailError) {
+                  setEmailError(err);
+                  hasEmailError = true;
+                }
+              } else if (errLower.includes('password')) {
+                if (!hasPasswordError) {
+                  setPasswordError(err);
+                  hasPasswordError = true;
+                }
+              } else if (errLower.includes('name')) {
+                setDisplayNameError(err);
+              } else {
+                // Generic error - show on email field
+                if (!hasEmailError) {
+                  setEmailError(err);
+                  hasEmailError = true;
+                }
+              }
+            }
+
+            if (validation.suggestions) {
+              console.log('[Auth] Suggestions:', validation.suggestions);
+            }
+
             setLoading(false);
             return;
           }
-          console.log('[Auth] Email is available, proceeding with registration');
-        } catch (emailCheckError: any) {
-          // If the check-email endpoint fails (e.g. network error), log it but continue
-          // We'll let Better Auth handle the duplicate check as a fallback
-          console.warn('[Auth] Email availability check failed, proceeding with registration anyway:', emailCheckError?.message);
+          console.log('[Auth] Pre-validation passed, proceeding with registration');
+        } catch (validationError: any) {
+          // If the validate-registration endpoint fails, fall back to check-email
+          console.warn('[Auth] validate-registration endpoint failed, falling back to check-email:', validationError?.message);
+
+          // If the validation endpoint returned a 400 with an error message, surface it
+          if (validationError?.status === 400 && validationError?.message) {
+            const errMsg = validationError.message.toLowerCase();
+            if (errMsg.includes('email')) {
+              setEmailError(validationError.message);
+            } else if (errMsg.includes('password')) {
+              setPasswordError(validationError.message);
+            } else {
+              setEmailError(validationError.message);
+            }
+            setLoading(false);
+            return;
+          }
+
+          try {
+            const emailCheck = await checkEmailAvailability(email);
+            if (!emailCheck.available) {
+              console.log('[Auth] Email already in use (confirmed by check-email endpoint):', email);
+              setEmailError('This email address is already in use. Please sign in or use a different email.');
+              setLoading(false);
+              return;
+            }
+          } catch (emailCheckError: any) {
+            // If both checks fail, log and continue - let Better Auth handle it
+            console.warn('[Auth] Email availability check also failed, proceeding anyway:', emailCheckError?.message);
+          }
         }
 
+        console.log('[Auth] Calling Better Auth signUp.email...');
         const result = await authClient.signUp.email({
-          email,
+          email: email.toLowerCase().trim(),
           password,
           name: displayName,
         });
@@ -239,17 +318,33 @@ export default function AuthScreen() {
 
         if (result.error) {
           console.error('[Auth] Registration error:', JSON.stringify(result.error, null, 2));
-          
-          const errorMessage = result.error.message || 'Registration failed';
+
+          const errorMessage = result.error.message || '';
           const errorStatus = result.error.status;
-          
+
           console.log('[Auth] Error message:', errorMessage);
           console.log('[Auth] Error status:', errorStatus);
-          
-          if (errorMessage.toLowerCase().includes('email') || errorMessage.toLowerCase().includes('already')) {
-            setEmailError('This email address is already in use. Please sign in or use a different email.');
+
+          // Handle specific error cases based on status code from backend
+          if (errorStatus === 409) {
+            // 409 Conflict - Email already exists (backend confirmed)
+            console.log('[Auth] 409 Conflict - Email already exists');
+            setEmailError(errorMessage || 'This email address is already in use. Please sign in or use a different email.');
+          } else if (errorStatus === 400) {
+            // 400 Bad Request - Validation error (weak password, invalid email, etc.)
+            console.log('[Auth] 400 Bad Request - Validation error');
+            if (errorMessage.toLowerCase().includes('password')) {
+              setPasswordError(errorMessage || 'Password does not meet requirements');
+            } else if (errorMessage.toLowerCase().includes('email')) {
+              setEmailError(errorMessage || 'Invalid email address');
+            } else {
+              // Show the actual backend error message
+              setEmailError(errorMessage || 'Registration failed. Please check your information and try again.');
+            }
           } else {
-            setEmailError('Registration failed. Please try again.');
+            // Other errors (500, network errors, etc.) - show generic message
+            console.log('[Auth] Non-409/400 error - showing generic failure message');
+            setEmailError('Registration failed. Please try again later.');
           }
           setLoading(false);
           return;
@@ -265,13 +360,25 @@ export default function AuthScreen() {
     } catch (error: any) {
       console.error('[Auth] Auth error:', error);
       console.error('[Auth] Error details:', JSON.stringify(error, null, 2));
-      
+
       if (mode === 'login') {
         setPasswordError('Incorrect email or password');
       } else {
-        const errorMessage = error?.message || 'Registration failed. Please try again.';
-        console.log('[Auth] Setting error message:', errorMessage);
-        setEmailError(errorMessage);
+        // For registration errors with a status code, show the actual message
+        if (error?.status === 409) {
+          setEmailError(error.message || 'This email address is already in use. Please sign in or use a different email.');
+        } else if (error?.status === 400) {
+          const errMsg = (error.message || '').toLowerCase();
+          if (errMsg.includes('password')) {
+            setPasswordError(error.message || 'Password does not meet requirements');
+          } else {
+            setEmailError(error.message || 'Registration failed. Please check your information and try again.');
+          }
+        } else {
+          // Generic fallback for unexpected errors
+          console.log('[Auth] Unexpected error during registration');
+          setEmailError('Registration failed. Please try again later.');
+        }
       }
     } finally {
       setLoading(false);
