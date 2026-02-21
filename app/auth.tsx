@@ -13,34 +13,13 @@ import {
   Image,
   Modal,
 } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { authClient } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedGet, apiPost } from '@/utils/api';
 import { User } from '@/types/models';
-
-// Debug Info Component
-function DebugInfo() {
-  const { user, loading } = useAuth();
-  const pathname = usePathname();
-  
-  const userPresent = user ? 'true' : 'false';
-  const isLoadingText = loading ? 'true' : 'false';
-  const onboardedText = 'N/A';
-  const tokenPresent = 'checking...';
-  
-  return (
-    <View style={styles.debugContainer}>
-      <Text style={styles.debugText}>Route: {pathname}</Text>
-      <Text style={styles.debugText}>isLoading: {isLoadingText}</Text>
-      <Text style={styles.debugText}>User present: {userPresent}</Text>
-      <Text style={styles.debugText}>Onboarded: {onboardedText}</Text>
-      <Text style={styles.debugText}>Token present: {tokenPresent}</Text>
-    </View>
-  );
-}
 
 /**
  * Check if an email address is available for registration
@@ -257,7 +236,7 @@ export default function AuthScreen() {
         try {
           console.log('[Auth] Pre-validating registration data...');
           const validation = await validateRegistration(email, password, displayName);
-          console.log('[Auth] Validation result:', validation);
+          console.log('[Auth] Validation result:', JSON.stringify(validation, null, 2));
 
           if (!validation.valid) {
             console.log('[Auth] Validation failed with errors:', validation.errors);
@@ -268,7 +247,19 @@ export default function AuthScreen() {
 
             for (const err of errors) {
               const errLower = err.toLowerCase();
-              if (errLower.includes('email') || errLower.includes('already') || errLower.includes('use')) {
+              // Only show "already in use" if the error message explicitly says so
+              const isAlreadyInUseError =
+                errLower.includes('already in use') ||
+                errLower === 'email address already in use' ||
+                errLower.includes('email already');
+
+              if (isAlreadyInUseError) {
+                if (!hasEmailError) {
+                  console.log('[Auth] Email already in use (from validate-registration)');
+                  setEmailError('This email address is already in use. Please sign in or use a different email.');
+                  hasEmailError = true;
+                }
+              } else if (errLower.includes('email') || errLower.includes('invalid email')) {
                 if (!hasEmailError) {
                   setEmailError(err);
                   hasEmailError = true;
@@ -298,35 +289,29 @@ export default function AuthScreen() {
           }
           console.log('[Auth] Pre-validation passed, proceeding with registration');
         } catch (validationError: any) {
-          // If the validate-registration endpoint fails, fall back to check-email
-          console.warn('[Auth] validate-registration endpoint failed, falling back to check-email:', validationError?.message);
+          // If the validate-registration endpoint fails, log and continue
+          console.warn('[Auth] validate-registration endpoint failed:', validationError?.message);
+          console.warn('[Auth] validate-registration error status:', validationError?.status);
+          console.warn('[Auth] validate-registration error body:', validationError?.responseBody);
 
-          // If the validation endpoint returned a 400 with an error message, surface it
+          // Only surface 400 validation errors - do NOT map other errors to "already in use"
           if (validationError?.status === 400 && validationError?.message) {
             const errMsg = validationError.message.toLowerCase();
-            if (errMsg.includes('email')) {
-              setEmailError(validationError.message);
-            } else if (errMsg.includes('password')) {
+            if (errMsg.includes('password')) {
               setPasswordError(validationError.message);
-            } else {
+            } else if (errMsg.includes('name')) {
+              setDisplayNameError(validationError.message);
+            } else if (errMsg.includes('email')) {
               setEmailError(validationError.message);
+            } else {
+              setEmailError('Registration failed. Please try again.');
             }
             setLoading(false);
             return;
           }
 
-          try {
-            const emailCheck = await checkEmailAvailability(email);
-            if (!emailCheck.available) {
-              console.log('[Auth] Email already in use (confirmed by check-email endpoint):', email);
-              setEmailError('This email address is already in use. Please sign in or use a different email.');
-              setLoading(false);
-              return;
-            }
-          } catch (emailCheckError: any) {
-            // If both checks fail, log and continue - let Better Auth handle it
-            console.warn('[Auth] Email availability check also failed, proceeding anyway:', emailCheckError?.message);
-          }
+          // For non-400 errors (network issues, 500s, etc.), proceed to let Better Auth handle it
+          console.warn('[Auth] Non-400 validation error, proceeding to Better Auth signup');
         }
 
         console.log('[Auth] Calling Better Auth signUp.email...');
@@ -347,26 +332,30 @@ export default function AuthScreen() {
           console.log('[Auth] Error message:', errorMessage);
           console.log('[Auth] Error status:', errorStatus);
 
-          // Handle specific error cases based on status code from backend
+          // Handle specific error cases based on HTTP status code ONLY
           if (errorStatus === 409) {
             // 409 Conflict - Email already exists (backend confirmed)
             console.log('[Auth] 409 Conflict - Email already exists');
-            setEmailError(errorMessage || 'This email address is already in use. Please sign in or use a different email.');
+            setEmailError('This email address is already in use. Please sign in or use a different email.');
           } else if (errorStatus === 400) {
             // 400 Bad Request - Validation error (weak password, invalid email, etc.)
-            console.log('[Auth] 400 Bad Request - Validation error');
-            if (errorMessage.toLowerCase().includes('password')) {
+            console.log('[Auth] 400 Bad Request - Validation error:', errorMessage);
+            const errLower = errorMessage.toLowerCase();
+            if (errLower.includes('password')) {
               setPasswordError(errorMessage || 'Password does not meet requirements');
-            } else if (errorMessage.toLowerCase().includes('email')) {
+            } else if (errLower.includes('name')) {
+              setDisplayNameError(errorMessage || 'Invalid name');
+            } else if (errLower.includes('email')) {
               setEmailError(errorMessage || 'Invalid email address');
             } else {
-              // Show the actual backend error message
-              setEmailError(errorMessage || 'Registration failed. Please check your information and try again.');
+              setEmailError(errorMessage || 'Invalid registration details. Please check your input.');
             }
           } else {
-            // Other errors (500, network errors, etc.) - show generic message
+            // All other errors (500, network errors, unknown) - show generic message
+            // NEVER show "already in use" for non-409 errors
             console.log('[Auth] Non-409/400 error - showing generic failure message');
-            setEmailError('Registration failed. Please try again later.');
+            console.error('[Auth] Backend error details for debugging:', errorMessage, 'status:', errorStatus);
+            setEmailError('Registration failed. Please try again.');
           }
           setLoading(false);
           return;
@@ -385,20 +374,29 @@ export default function AuthScreen() {
       if (mode === 'login') {
         setPasswordError('Incorrect email or password');
       } else {
-        // For registration errors with a status code, show the actual message
+        // For registration errors, use HTTP status code to determine the message
+        console.error('[Auth] Caught registration error - status:', error?.status, 'message:', error?.message);
         if (error?.status === 409) {
-          setEmailError(error.message || 'This email address is already in use. Please sign in or use a different email.');
+          // Only 409 means "email already in use"
+          console.log('[Auth] Caught 409 error - Email already in use');
+          setEmailError('This email address is already in use. Please sign in or use a different email.');
         } else if (error?.status === 400) {
+          console.log('[Auth] Caught 400 error - Validation failed:', error?.message);
           const errMsg = (error.message || '').toLowerCase();
           if (errMsg.includes('password')) {
             setPasswordError(error.message || 'Password does not meet requirements');
+          } else if (errMsg.includes('name')) {
+            setDisplayNameError(error.message || 'Invalid name');
+          } else if (errMsg.includes('email')) {
+            setEmailError(error.message || 'Invalid email address');
           } else {
-            setEmailError(error.message || 'Registration failed. Please check your information and try again.');
+            setEmailError(error.message || 'Invalid registration details. Please check your input.');
           }
         } else {
-          // Generic fallback for unexpected errors
-          console.log('[Auth] Unexpected error during registration');
-          setEmailError('Registration failed. Please try again later.');
+          // All other errors (500, network, unknown) - generic message, NEVER "already in use"
+          console.log('[Auth] Unexpected error during registration (non-409/400)');
+          console.error('[Auth] Full error object for debugging:', JSON.stringify(error, null, 2));
+          setEmailError('Registration failed. Please try again.');
         }
       }
     } finally {
@@ -468,8 +466,6 @@ export default function AuthScreen() {
       style={[styles.container, { backgroundColor: themeColors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <DebugInfo />
-      
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -707,15 +703,6 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  debugContainer: {
-    padding: 10,
-    backgroundColor: '#333',
-  },
-  debugText: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   scrollContent: {
     flexGrow: 1,

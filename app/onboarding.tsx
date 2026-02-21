@@ -12,33 +12,12 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, usePathname, Link } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { authenticatedPut } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-
-// Debug Info Component
-function DebugInfo() {
-  const { user, loading } = useAuth();
-  const pathname = usePathname();
-  
-  const userPresent = user ? 'true' : 'false';
-  const isLoadingText = loading ? 'true' : 'false';
-  const onboardedText = 'false';
-  const tokenPresent = 'checking...';
-  
-  return (
-    <View style={styles.debugContainer}>
-      <Text style={styles.debugText}>Route: {pathname}</Text>
-      <Text style={styles.debugText}>isLoading: {isLoadingText}</Text>
-      <Text style={styles.debugText}>User present: {userPresent}</Text>
-      <Text style={styles.debugText}>Onboarded: {onboardedText}</Text>
-      <Text style={styles.debugText}>Token present: {tokenPresent}</Text>
-    </View>
-  );
-}
 
 export default function OnboardingScreen() {
   const { user, fetchUser } = useAuth();
@@ -303,8 +282,6 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['bottom']}>
-      <DebugInfo />
-      
       <Link href="/reset" style={styles.resetLink}>
         <Text style={styles.resetLinkText}>Emergency Reset</Text>
       </Link>
@@ -379,16 +356,6 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  debugContainer: {
-    padding: 10,
-    backgroundColor: '#333',
-    marginBottom: 10,
-  },
-  debugText: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   resetLink: {
     padding: 12,

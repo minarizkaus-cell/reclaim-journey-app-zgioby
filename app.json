@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "My Rec",
-    "slug": "My Rec",
+    "slug": "My-Rec",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-dgf.png",
@@ -36,13 +36,14 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "My Rec",
+    "scheme": "My-Rec",
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://8b7nmybw2syrfb2v2uutkkpz5cyh8a78.app.specular.dev"
+      "backendUrl": "https://8b7nmybw2syrfb2v2uutkkpz5cyh8a78.app.specular.dev",
+      "EXPO_PUBLIC_DEBUG_UI": "false"
     }
   }
 }

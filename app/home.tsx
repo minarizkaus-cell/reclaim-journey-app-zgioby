@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -37,12 +37,7 @@ export default function HomeScreen() {
   const [showVerificationBanner, setShowVerificationBanner] = useState(false);
   const [verificationExpired, setVerificationExpired] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-    loadJFT();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       console.log('[Home] Loading user profile...');
       const data = await authenticatedGet<User>('/api/user/profile');
@@ -70,9 +65,9 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
-  const loadJFT = async () => {
+  const loadJFT = useCallback(async () => {
     try {
       console.log('[Home] Loading Just For Today reading...');
       const reading = await getJFTReading();
@@ -85,7 +80,12 @@ export default function HomeScreen() {
     } finally {
       setJftLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadProfile();
+    loadJFT();
+  }, [loadProfile, loadJFT]);
 
   const onRefresh = async () => {
     setRefreshing(true);
