@@ -21,6 +21,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedGet, apiPost } from '@/utils/api';
 import { User } from '@/types/models';
 
+/**
+ * Check if an email address is available for registration
+ * Uses the /api/user/check-email endpoint to pre-validate before attempting signup
+ */
+async function checkEmailAvailability(email: string): Promise<{ available: boolean; email: string }> {
+  console.log('[Auth] Checking email availability for:', email);
+  const result = await apiPost<{ available: boolean; email: string }>('/api/user/check-email', { email });
+  console.log('[Auth] Email availability result:', result);
+  return result;
+}
+
 type Mode = 'login' | 'register';
 
 export default function AuthScreen() {
@@ -178,6 +189,8 @@ export default function AuthScreen() {
           password,
         });
 
+        console.log('[Auth] Login result:', result);
+
         if (result.error) {
           console.error('[Auth] Login error:', result.error);
           setPasswordError('Incorrect email or password');
@@ -197,16 +210,47 @@ export default function AuthScreen() {
           router.replace('/home');
         }
       } else {
-        console.log('[Auth] Attempting registration...');
+        console.log('[Auth] Attempting registration with email:', email, 'name:', displayName);
+
+        // Pre-check email availability using the dedicated endpoint
+        // This avoids the Better Auth "email already in use" false positive issue
+        try {
+          const emailCheck = await checkEmailAvailability(email);
+          if (!emailCheck.available) {
+            console.log('[Auth] Email already in use (confirmed by check-email endpoint):', email);
+            setEmailError('This email address is already in use. Please sign in or use a different email.');
+            setLoading(false);
+            return;
+          }
+          console.log('[Auth] Email is available, proceeding with registration');
+        } catch (emailCheckError: any) {
+          // If the check-email endpoint fails (e.g. network error), log it but continue
+          // We'll let Better Auth handle the duplicate check as a fallback
+          console.warn('[Auth] Email availability check failed, proceeding with registration anyway:', emailCheckError?.message);
+        }
+
         const result = await authClient.signUp.email({
           email,
           password,
           name: displayName,
         });
 
+        console.log('[Auth] Registration result:', JSON.stringify(result, null, 2));
+
         if (result.error) {
-          console.error('[Auth] Registration error:', result.error);
-          setEmailError('Registration failed. Email may already be in use.');
+          console.error('[Auth] Registration error:', JSON.stringify(result.error, null, 2));
+          
+          const errorMessage = result.error.message || 'Registration failed';
+          const errorStatus = result.error.status;
+          
+          console.log('[Auth] Error message:', errorMessage);
+          console.log('[Auth] Error status:', errorStatus);
+          
+          if (errorMessage.toLowerCase().includes('email') || errorMessage.toLowerCase().includes('already')) {
+            setEmailError('This email address is already in use. Please sign in or use a different email.');
+          } else {
+            setEmailError('Registration failed. Please try again.');
+          }
           setLoading(false);
           return;
         }
@@ -218,12 +262,16 @@ export default function AuthScreen() {
         console.log('[Auth] Redirecting to onboarding');
         router.replace('/onboarding');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Auth] Auth error:', error);
+      console.error('[Auth] Error details:', JSON.stringify(error, null, 2));
+      
       if (mode === 'login') {
         setPasswordError('Incorrect email or password');
       } else {
-        setEmailError('Registration failed. Please try again.');
+        const errorMessage = error?.message || 'Registration failed. Please try again.';
+        console.log('[Auth] Setting error message:', errorMessage);
+        setEmailError(errorMessage);
       }
     } finally {
       setLoading(false);
