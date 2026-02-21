@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import * as authSchema from '../db/auth-schema.js';
 import * as appSchema from '../db/schema.js';
 import { validatePassword } from '../utils/password-validation.js';
+import { normalizeEmail, isValidEmail, emailsMatch } from '../utils/auth-utils.js';
 
 export function registerUserRoutes(app: App) {
   const requireAuth = app.requireAuth();
@@ -40,86 +41,266 @@ export function registerUserRoutes(app: App) {
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as { email?: string };
-    const email = body.email?.toLowerCase().trim();
+    const rawEmail = body.email?.trim();
+    const normalizedEmail = normalizeEmail(rawEmail || '');
 
-    app.logger.info({ email }, 'Checking email availability');
+    app.logger.info(
+      { email: normalizedEmail, rawEmail },
+      'POST /api/user/check-email - checking email availability'
+    );
 
     try {
-      if (!email || !email.includes('@')) {
-        app.logger.warn({ email }, 'Invalid email format');
+      if (!isValidEmail(normalizedEmail)) {
+        app.logger.warn({ email: normalizedEmail }, 'Invalid email format provided');
         return reply.code(400).send({ error: 'Invalid email format' });
       }
 
-      // Check if email already exists in database
+      // Check if email already exists in database (case-insensitive)
       const existingUser = await app.db
-        .select({ id: authSchema.user.id })
+        .select({ id: authSchema.user.id, email: authSchema.user.email })
         .from(authSchema.user)
-        .where(eq(authSchema.user.email, email));
+        .where(eq(authSchema.user.email, normalizedEmail));
 
       const available = existingUser.length === 0;
 
       app.logger.info(
-        { email, available, existingUsers: existingUser.length },
+        {
+          email: normalizedEmail,
+          available,
+          existingCount: existingUser.length,
+          existingEmails: existingUser.map(u => u.email),
+        },
         'Email availability check completed'
       );
 
       return {
         available,
-        email,
+        email: normalizedEmail,
       };
     } catch (error) {
       app.logger.error(
-        { err: error, email },
+        {
+          err: error,
+          email: normalizedEmail,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
         'Failed to check email availability'
       );
       throw error;
     }
   });
 
-  // GET /api/user/registration-debug - Debug registration issues (development only)
-  app.fastify.get('/api/user/registration-debug', {
+  // GET /api/user/registration-test - Test and debug registration system
+  app.fastify.get('/api/user/registration-test', {
     schema: {
-      description: 'Debug endpoint to check database state and registration system',
+      description: 'Debug endpoint to test registration system and database state',
       tags: ['user'],
       response: {
         200: {
-          description: 'Database and registration system debug info',
+          description: 'Registration test results',
           type: 'object',
           properties: {
+            status: { type: 'string' },
             totalUsers: { type: 'number' },
-            emailConstraintExists: { type: 'boolean' },
-            sampleEmails: {
+            emails: {
               type: 'array',
               items: { type: 'string' },
             },
+            duplicateEmails: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+            caseInsensitiveDuplicates: {
+              type: 'array',
+              items: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+            },
+            timestamp: { type: 'string' },
           },
         },
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    app.logger.info({}, 'Debug endpoint called - checking registration system');
+    app.logger.info({}, 'GET /api/user/registration-test - running diagnostics');
 
     try {
-      // Count total users
+      // Get all users with their emails
       const users = await app.db
         .select({ id: authSchema.user.id, email: authSchema.user.email })
         .from(authSchema.user);
 
       app.logger.info(
         { totalUsers: users.length },
-        'Retrieved user count from database'
+        'Retrieved all users from database'
+      );
+
+      // Check for exact duplicates
+      const emailCounts = new Map<string, number>();
+      const lowerEmailCounts = new Map<string, string[]>();
+
+      users.forEach(user => {
+        const email = user.email;
+        const lowerEmail = email.toLowerCase();
+
+        // Track exact duplicates
+        emailCounts.set(email, (emailCounts.get(email) ?? 0) + 1);
+
+        // Track case-insensitive duplicates
+        if (!lowerEmailCounts.has(lowerEmail)) {
+          lowerEmailCounts.set(lowerEmail, []);
+        }
+        const variants = lowerEmailCounts.get(lowerEmail)!;
+        if (!variants.includes(email)) {
+          variants.push(email);
+        }
+      });
+
+      // Find duplicates
+      const exactDuplicates = Array.from(emailCounts.entries())
+        .filter(([_, count]) => count > 1)
+        .map(([email, _]) => email);
+
+      const caseInsensitiveDuplicates = Array.from(lowerEmailCounts.entries())
+        .filter(([_, variants]) => variants.length > 1)
+        .map(([_, variants]) => variants);
+
+      const sampleEmails = users.slice(0, 10).map(u => u.email);
+
+      app.logger.info(
+        {
+          totalUsers: users.length,
+          exactDuplicates: exactDuplicates.length,
+          caseInsensitiveDuplicates: caseInsensitiveDuplicates.length,
+        },
+        'Registration diagnostics completed'
       );
 
       return {
+        status: 'ok',
         totalUsers: users.length,
-        emailConstraintExists: true,
-        sampleEmails: users.slice(0, 5).map(u => u.email),
+        emails: sampleEmails,
+        duplicateEmails: exactDuplicates,
+        caseInsensitiveDuplicates,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
       app.logger.error(
-        { err: error },
-        'Failed to get registration debug info'
+        {
+          err: error,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorCode: (error as any)?.code,
+        },
+        'Failed to run registration diagnostics'
+      );
+      throw error;
+    }
+  });
+
+  // POST /api/user/validate-registration - Validate registration data before attempting signup
+  app.fastify.post('/api/user/validate-registration', {
+    schema: {
+      description: 'Validate registration data (email format, availability, password strength)',
+      tags: ['user'],
+      body: {
+        type: 'object',
+        required: ['email', 'password', 'name'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string' },
+          name: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          description: 'Validation result',
+          type: 'object',
+          properties: {
+            valid: { type: 'boolean' },
+            errors: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+            email: { type: 'string' },
+            suggestions: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as { email?: string; password?: string; name?: string };
+    const rawEmail = body.email?.trim();
+    const normalizedEmail = normalizeEmail(rawEmail || '');
+    const password = body.password || '';
+    const name = body.name?.trim() || '';
+
+    app.logger.info(
+      { email: normalizedEmail, hasPassword: !!password, hasName: !!name },
+      'POST /api/user/validate-registration - validating registration data'
+    );
+
+    const errors: string[] = [];
+
+    try {
+      // Validate email format
+      if (!isValidEmail(normalizedEmail)) {
+        errors.push('Invalid email format');
+      }
+
+      // Validate name
+      if (!name || name.length < 2) {
+        errors.push('Name must be at least 2 characters');
+      }
+
+      // Validate password strength
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        errors.push(...(passwordValidation.errors || []));
+      }
+
+      // Check if email is available (only if email is valid)
+      let emailExists = false;
+      if (isValidEmail(normalizedEmail)) {
+        const existingUser = await app.db
+          .select({ id: authSchema.user.id, email: authSchema.user.email })
+          .from(authSchema.user)
+          .where(eq(authSchema.user.email, normalizedEmail));
+
+        if (existingUser.length > 0) {
+          errors.push('Email address already in use');
+          emailExists = true;
+        }
+      }
+
+      const valid = errors.length === 0;
+
+      app.logger.info(
+        {
+          email: normalizedEmail,
+          valid,
+          errorCount: errors.length,
+          emailExists,
+        },
+        'Registration validation completed'
+      );
+
+      return {
+        valid,
+        errors,
+        email: normalizedEmail,
+        suggestions: !valid
+          ? 'Please fix the errors above before attempting to register'
+          : 'Registration data is valid. Ready to proceed.',
+      };
+    } catch (error) {
+      app.logger.error(
+        {
+          err: error,
+          email: normalizedEmail,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
+        'Failed to validate registration data'
       );
       throw error;
     }

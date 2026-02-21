@@ -24,6 +24,25 @@ app.withAuth({
   },
 });
 
+// Add middleware to log auth endpoint errors with full details
+app.fastify.addHook('onError', async (request, reply, error) => {
+  // Only log auth signup errors in detail
+  if (request.url?.includes('/api/auth/sign-up/email')) {
+    app.logger.error(
+      {
+        err: error,
+        path: request.url,
+        method: request.method,
+        statusCode: reply.statusCode,
+        errorMessage: error?.message,
+        errorCode: (error as any)?.code,
+        details: (error as any)?.details,
+      },
+      'Auth signup endpoint error'
+    );
+  }
+});
+
 // Register routes - add your route modules here
 // IMPORTANT: Always use registration functions to avoid circular dependency issues
 registerUserRoutes(app);

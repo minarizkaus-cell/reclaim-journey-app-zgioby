@@ -36,6 +36,13 @@
       "when": 1771685200000,
       "tag": "20260221_ensure_email_unique_constraint",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771685300000,
+      "tag": "20260221_fix_email_uniqueness",
+      "breakpoints": true
     }
   ]
 }
