@@ -2,6 +2,7 @@ import type { App } from '../index.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { eq } from 'drizzle-orm';
 import * as authSchema from '../db/auth-schema.js';
+import * as appSchema from '../db/schema.js';
 import { validatePassword } from '../utils/password-validation.js';
 
 export function registerUserRoutes(app: App) {
@@ -296,6 +297,106 @@ export function registerUserRoutes(app: App) {
       app.logger.error(
         { err: error, userId: session.user.id },
         'Failed to change password'
+      );
+      throw error;
+    }
+  });
+
+  // DELETE /api/user/account - Delete user account and all associated data
+  app.fastify.delete('/api/user/account', {
+    schema: {
+      description: 'Permanently delete the authenticated user account and all associated data',
+      tags: ['user'],
+      response: {
+        200: {
+          description: 'Account deleted successfully',
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+        401: {
+          description: 'Unauthorized - user not authenticated',
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+        404: {
+          description: 'User not found',
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+        500: {
+          description: 'Internal server error',
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) => {
+    const session = await requireAuth(request, reply);
+    if (!session) return;
+
+    const userId = session.user.id;
+
+    app.logger.info(
+      { userId },
+      'Deleting user account and all associated data'
+    );
+
+    try {
+      // Verify user exists
+      const [userRecord] = await app.db
+        .select()
+        .from(authSchema.user)
+        .where(eq(authSchema.user.id, userId));
+
+      if (!userRecord) {
+        app.logger.error({ userId }, 'User not found for deletion');
+        return reply.code(404).send({ error: 'User not found' });
+      }
+
+      // Delete all user-related data in transaction
+      // The order matters: delete dependent records first
+      await app.db.delete(appSchema.copingToolCompletions)
+        .where(eq(appSchema.copingToolCompletions.userId, userId));
+
+      await app.db.delete(appSchema.cravingSessions)
+        .where(eq(appSchema.cravingSessions.userId, userId));
+
+      await app.db.delete(appSchema.journalEntries)
+        .where(eq(appSchema.journalEntries.userId, userId));
+
+      await app.db.delete(appSchema.calendarEvents)
+        .where(eq(appSchema.calendarEvents.userId, userId));
+
+      // Delete the user record
+      // Cascade deletes will handle: account, session, and verification records
+      await app.db.delete(authSchema.user)
+        .where(eq(authSchema.user.id, userId));
+
+      app.logger.info(
+        { userId },
+        'User account and all associated data deleted successfully'
+      );
+
+      return {
+        success: true,
+        message: 'Account and all associated data deleted successfully',
+      };
+    } catch (error) {
+      app.logger.error(
+        { err: error, userId },
+        'Failed to delete user account'
       );
       throw error;
     }

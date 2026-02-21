@@ -5,33 +5,26 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1771134868226,
-      "tag": "20260215055428_tranquil_black_tom",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
       "when": 1771136479731,
       "tag": "20260215062119_loose_butterfly",
       "breakpoints": true
     },
     {
-      "idx": 2,
+      "idx": 1,
       "version": "7",
       "when": 1771138433026,
       "tag": "20260215065353_complex_alex_wilder",
       "breakpoints": true
     },
     {
-      "idx": 3,
+      "idx": 2,
       "version": "7",
       "when": 1771145192017,
       "tag": "20260215084632_deep_the_fury",
       "breakpoints": true
     },
     {
-      "idx": 4,
+      "idx": 3,
       "version": "7",
       "when": 1771164994949,
       "tag": "20260215141634_organic_firedrake",
