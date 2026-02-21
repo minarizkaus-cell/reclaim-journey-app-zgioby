@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useRe
 import { Platform } from "react-native";
 import * as Linking from "expo-linking";
 import { authClient, setBearerToken, clearAuthTokens } from "@/lib/auth";
+import { authenticatedDelete } from "@/utils/api";
 
 interface User {
   id: string;
@@ -20,6 +21,7 @@ interface AuthContextType {
   signInWithApple: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   fetchUser: () => Promise<void>;
 }
 
@@ -229,6 +231,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      console.log('[AuthContext] Deleting account...');
+      const result = await authenticatedDelete<{ success: boolean; message: string }>('/api/user/account');
+      console.log('[AuthContext] Account deletion API response:', result);
+      if (!result.success) {
+        throw new Error(result.message || 'Account deletion failed');
+      }
+      console.log('[AuthContext] Account and all associated data deleted successfully');
+    } catch (error) {
+      console.error("[AuthContext] Account deletion failed:", error);
+      throw error;
+    } finally {
+      // Always clear local state regardless of API result
+      console.log('[AuthContext] Clearing local auth state after account deletion');
+      setUser(null);
+      await clearAuthTokens();
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -240,6 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithApple,
         signInWithGitHub,
         signOut,
+        deleteAccount,
         fetchUser,
       }}
     >

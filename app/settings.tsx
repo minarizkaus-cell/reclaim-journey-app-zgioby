@@ -17,12 +17,14 @@ import { Button } from '@/components/Button';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function SettingsScreen() {
-  const { signOut } = useAuth();
+  const { signOut, deleteAccount } = useAuth();
   const colorScheme = useColorScheme();
   const themeColors = colorScheme === 'dark' ? colors.dark : colors.light;
   const router = useRouter();
 
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSignOut = async () => {
     console.log('[Settings] User confirmed sign out');
@@ -33,6 +35,21 @@ export default function SettingsScreen() {
       router.replace('/auth');
     } catch (error) {
       console.error('[Settings] Sign out failed:', error);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      console.log('[Settings] User confirmed account deletion');
+      setIsDeleting(true);
+      await deleteAccount();
+      console.log('[Settings] Account deletion successful, redirecting to auth');
+      router.replace('/auth');
+    } catch (error) {
+      console.error('[Settings] Account deletion error:', error);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteAccountModal(false);
     }
   };
 
@@ -104,6 +121,38 @@ export default function SettingsScreen() {
             variant="outline"
           />
         </View>
+
+        <View style={styles.dangerZone}>
+          <Text style={[styles.sectionTitle, { color: themeColors.error }]}>
+            Danger Zone
+          </Text>
+          <TouchableOpacity
+            style={[styles.dangerItem, { backgroundColor: themeColors.card, borderColor: themeColors.error }]}
+            onPress={() => setShowDeleteAccountModal(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingItemLeft}>
+              <IconSymbol
+                ios_icon_name="trash.fill"
+                android_material_icon_name="delete"
+                size={24}
+                color={themeColors.error}
+              />
+              <Text style={[styles.dangerText, { color: themeColors.error }]}>
+                Delete Account
+              </Text>
+            </View>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="chevron-right"
+              size={20}
+              color={themeColors.error}
+            />
+          </TouchableOpacity>
+          <Text style={[styles.dangerWarning, { color: themeColors.textSecondary }]}>
+            This will permanently delete your account and all associated data. This action cannot be undone.
+          </Text>
+        </View>
       </ScrollView>
 
       <Modal
@@ -147,6 +196,60 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showDeleteAccountModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !isDeleting && setShowDeleteAccountModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.card }]}>
+            <IconSymbol
+              ios_icon_name="exclamationmark.triangle.fill"
+              android_material_icon_name="warning"
+              size={48}
+              color={themeColors.error}
+            />
+            <Text style={[styles.modalTitle, { color: themeColors.text }]}>
+              Delete Account?
+            </Text>
+            <Text style={[styles.modalMessage, { color: themeColors.textSecondary }]}>
+              This will permanently delete your account and all associated data including:
+            </Text>
+            <View style={styles.deleteList}>
+              <Text style={[styles.deleteListItem, { color: themeColors.textSecondary }]}>• All journal entries</Text>
+              <Text style={[styles.deleteListItem, { color: themeColors.textSecondary }]}>• Calendar events and reminders</Text>
+              <Text style={[styles.deleteListItem, { color: themeColors.textSecondary }]}>• Craving session history</Text>
+              <Text style={[styles.deleteListItem, { color: themeColors.textSecondary }]}>• Progress tracking data</Text>
+              <Text style={[styles.deleteListItem, { color: themeColors.textSecondary }]}>• Profile information</Text>
+            </View>
+            <Text style={[styles.modalWarning, { color: themeColors.error }]}>
+              This action cannot be undone.
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { borderColor: themeColors.border }]}
+                onPress={() => setShowDeleteAccountModal(false)}
+                disabled={isDeleting}
+              >
+                <Text style={[styles.modalButtonText, { color: themeColors.text }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonDanger, { backgroundColor: themeColors.error }]}
+                onPress={handleDeleteAccount}
+                disabled={isDeleting}
+              >
+                <Text style={styles.modalButtonTextPrimary}>
+                  {isDeleting ? 'Deleting...' : 'Delete Account'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -184,6 +287,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
+  dangerZone: {
+    marginTop: 40,
+    paddingTop: 32,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 59, 48, 0.2)',
+  },
+  dangerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    marginBottom: 12,
+  },
+  dangerText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  dangerWarning: {
+    fontSize: 13,
+    lineHeight: 18,
+    paddingHorizontal: 4,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -207,9 +334,25 @@ const styles = StyleSheet.create({
   },
   modalMessage: {
     fontSize: 14,
-    marginBottom: 24,
+    marginBottom: 16,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  deleteList: {
+    alignSelf: 'stretch',
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  deleteListItem: {
+    fontSize: 13,
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  modalWarning: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 24,
+    textAlign: 'center',
   },
   modalButtons: {
     flexDirection: 'row',
