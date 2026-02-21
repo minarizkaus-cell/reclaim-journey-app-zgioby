@@ -8,6 +8,123 @@ import { validatePassword } from '../utils/password-validation.js';
 export function registerUserRoutes(app: App) {
   const requireAuth = app.requireAuth();
 
+  // POST /api/user/check-email - Check if email is available for registration
+  app.fastify.post('/api/user/check-email', {
+    schema: {
+      description: 'Check if an email address is available for registration',
+      tags: ['user'],
+      body: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+        },
+      },
+      response: {
+        200: {
+          description: 'Email availability check result',
+          type: 'object',
+          properties: {
+            available: { type: 'boolean' },
+            email: { type: 'string' },
+          },
+        },
+        400: {
+          description: 'Invalid email format',
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as { email?: string };
+    const email = body.email?.toLowerCase().trim();
+
+    app.logger.info({ email }, 'Checking email availability');
+
+    try {
+      if (!email || !email.includes('@')) {
+        app.logger.warn({ email }, 'Invalid email format');
+        return reply.code(400).send({ error: 'Invalid email format' });
+      }
+
+      // Check if email already exists in database
+      const existingUser = await app.db
+        .select({ id: authSchema.user.id })
+        .from(authSchema.user)
+        .where(eq(authSchema.user.email, email));
+
+      const available = existingUser.length === 0;
+
+      app.logger.info(
+        { email, available, existingUsers: existingUser.length },
+        'Email availability check completed'
+      );
+
+      return {
+        available,
+        email,
+      };
+    } catch (error) {
+      app.logger.error(
+        { err: error, email },
+        'Failed to check email availability'
+      );
+      throw error;
+    }
+  });
+
+  // GET /api/user/registration-debug - Debug registration issues (development only)
+  app.fastify.get('/api/user/registration-debug', {
+    schema: {
+      description: 'Debug endpoint to check database state and registration system',
+      tags: ['user'],
+      response: {
+        200: {
+          description: 'Database and registration system debug info',
+          type: 'object',
+          properties: {
+            totalUsers: { type: 'number' },
+            emailConstraintExists: { type: 'boolean' },
+            sampleEmails: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    app.logger.info({}, 'Debug endpoint called - checking registration system');
+
+    try {
+      // Count total users
+      const users = await app.db
+        .select({ id: authSchema.user.id, email: authSchema.user.email })
+        .from(authSchema.user);
+
+      app.logger.info(
+        { totalUsers: users.length },
+        'Retrieved user count from database'
+      );
+
+      return {
+        totalUsers: users.length,
+        emailConstraintExists: true,
+        sampleEmails: users.slice(0, 5).map(u => u.email),
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      app.logger.error(
+        { err: error },
+        'Failed to get registration debug info'
+      );
+      throw error;
+    }
+  });
+
   // GET /api/user/profile - Get current authenticated user profile
   app.fastify.get('/api/user/profile', async (
     request: FastifyRequest,

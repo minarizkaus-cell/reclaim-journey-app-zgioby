@@ -29,6 +29,13 @@
       "when": 1771164994949,
       "tag": "20260215141634_organic_firedrake",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771685200000,
+      "tag": "20260221_ensure_email_unique_constraint",
+      "breakpoints": true
     }
   ]
 }
